@@ -1,0 +1,14 @@
+{
+  "scripts": {
+    "dev": "vitepress dev",
+    "build": "vitepress build",
+    "preview": "vitepress preview"
+  },
+  "dependencies": {
+    "markdown-it-katex": "^2.0.3",
+    "vitepress": "^1.6.4"
+  },
+  "devDependencies": {
+    "@vuepress/plugin-markdown-math": "^2.0.0-rc.112"
+  }
+}

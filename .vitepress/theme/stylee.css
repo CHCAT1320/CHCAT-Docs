@@ -1,0 +1,54 @@
+/* 引入自定义数学字体 */
+@font-face {
+  font-family: 'CustomMathFont';
+  src: url('./latinmodern-math.ttf') format('truetype'),
+       url('./latinmodern-math.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* 应用到所有KaTeX元素 */
+.katex {
+  font-family: 'CustomMathFont', 'STIXGeneral', 'Times New Roman', serif !important;
+}
+
+/* 确保数学公式内部也使用自定义字体 */
+.katex math {
+  font-family: 'CustomMathFont', 'STIXGeneral', 'Times New Roman', serif !important;
+}
+
+/* 针对不同类型的数学符号进行精细控制 */
+.katex .mord,    /* 普通符号 */
+.katex .mop,     /* 操作符 */
+.katex .mrel,    /* 关系符号 */
+.katex .mnum,    /* 数字 */
+.katex .mopen,   /* 左括号 */
+.katex .mclose,  /* 右括号 */
+.katex .mfrac,   /* 分数 */
+.katex .msup,    /* 上标 */
+.katex .msub,    /* 下标 */
+.katex .msubsup, /* 上下标 */
+.katex .munder,  /* 下划线 */
+.katex .mover,   /* 上划线 */
+.katex .munderover, /* 上下划线 */
+.katex .mmultiscripts, /* 多重脚本 */
+.katex .mtable,  /* 表格 */
+.katex .mtr,     /* 表格行 */
+.katex .mtd,     /* 表格单元格 */
+.katex .mroot,   /* 根号 */
+.katex .m.sqrt,  /* 平方根 */
+.katex .mphantom /* 幻影（不可见但占位） */ {
+  font-family: 'CustomMathFont', 'STIXGeneral', 'Times New Roman', serif !important;
+}
+
+/* 可选：调整字体大小 */
+.katex {
+  font-size: 1.5em !important;
+}
+
+/* 可选：调整块级公式的样式 */
+.katex-display {
+  margin: 1em 0 !important;
+  overflow: auto hidden !important;
+}
