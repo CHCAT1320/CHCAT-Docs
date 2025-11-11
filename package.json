@@ -3,7 +3,7 @@
     "dev": "vitepress dev",
     "build": "vitepress build",
     "preview": "vitepress preview",
-    "docs:build": "vitepress build docs"
+    "docs:build": "vitepress build"
   },
   "dependencies": {
     "markdown-it-katex": "^2.0.3",
