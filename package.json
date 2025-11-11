@@ -2,7 +2,8 @@
   "scripts": {
     "dev": "vitepress dev",
     "build": "vitepress build",
-    "preview": "vitepress preview"
+    "preview": "vitepress preview",
+    "docs:build": "vitepress build docs"
   },
   "dependencies": {
     "markdown-it-katex": "^2.0.3",
