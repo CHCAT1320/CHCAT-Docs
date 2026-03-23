@@ -77,6 +77,7 @@ export default defineConfig({
         items: [
           { text: 'Rizline谱面格式说明', link: '/knowladges/rizline/rizline.md' },
           { text: 'Rizline-easeType', link: '/knowladges/rizline/easeType.md' },
+          { text: 'CH-RZL-EDIT谱面格式说明', link: '/knowladges/rizline/cre.md' }
         ]
       },
       {
