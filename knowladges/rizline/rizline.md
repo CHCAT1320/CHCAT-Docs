@@ -331,7 +331,11 @@ function interpolateColor(startColor, endColor, progress) {
 
 **· floorPosition** `float` : 累计值（单位 $H$），表示该音符在对应图层中相对于初始时刻的累计垂直距离，通过该音符所在图层的 `speedKeyPoints` 计算而来
 
-**· otherInformations** `array` : 附加信息列表，对于非 `Hold` 音符，该列表为空数组，对于 `Hold` 音符，该列表有 `3` 个元素，分别表示 `Hold` 尾的 `time` 、`canvasIndex` 和 `floorPosition` 截止20260323目前只在LAIGN谱面的EZ难度中发现部分note无此项
+**· otherInformations** `array` : 附加信息列表，对于非 `Hold` 音符，该列表为空数组，对于 `Hold` 音符，该列表有 `3` 个元素，分别表示 `Hold` 尾的 `time` 、`canvasIndex` 和 `floorPosition` 
+
+::: warning WARNING
+截止20260323目前只在LAIGN谱面的EZ难度中发现部分note无`otherInformations`项
+:::
 
 ## 关键点 KeyPoint
 
