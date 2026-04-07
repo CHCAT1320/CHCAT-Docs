@@ -51,7 +51,7 @@ export default defineConfig({
   description: "冰猫の御用docs",
   lang: 'zh-CN',
   lastUpdated: true,
-  base: '/chcat-docs/',
+  base: '/CHCAT-Docs/',
   markdown: {
     config: (md) => {
       md.use(markdownItKatex)
