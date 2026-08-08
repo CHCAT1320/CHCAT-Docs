@@ -68,26 +68,44 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       { text: 'Home', link: '/' },
-      // { text: 'Examples', link: '/markdown-examples' }
+      { text: '知识', link: '/knowladge/' },
+      { text: '项目', link: '/objects/' },
     ],
 
     sidebar: [
       {
-        text: 'Rizline',
+        text: '知识',
+        collapsed: false,
         items: [
-          { text: 'Rizline谱面格式说明', link: '/knowladges/rizline/rizline.md' },
-          { text: 'Rizline-easeType', link: '/knowladges/rizline/easeType.md' },
-          { text: 'CH-RZL-EDIT谱面格式说明', link: '/knowladges/rizline/cre.md' }
+          {
+            text: 'Rizline',
+            collapsed: false,
+            items: [
+              { text: 'Rizline谱面格式说明', link: '/knowladge/rizline/rizline.md' },
+              { text: '缓动类型', link: '/knowladge/rizline/easeType.md' },
+              { text: 'CH-RZL-EDIT谱面格式说明', link: '/knowladge/rizline/cre.md' }
+            ]
+          },
+          {
+            text: 'CHUNITHM',
+            collapsed: false,
+            items: [
+              { text: 'CHUNITHM谱面格式说明', link: '/knowladge/chunithm/chunithm.md' }
+            ]
+          }
         ]
       },
       {
-        text: 'Objects',
+        text: '项目',
+        collapsed: false,
         items: [
-          { text: 'ch-rzl', link: '/objects/ch-rzl/ch-rzl.md' },
-          { text: 'ch-phi', link: '/objects/ch-obj/ch-phi.md' }
+          { text: 'ch-rzl', link: '/objects/ch-rzl/' },
+          { text: 'ch-phi', link: '/objects/ch-phi/' }
         ]
       }
     ],
+    outline: [2, 3],
+
     editLink: {
       pattern: 'https://github.com/CHCAT1320/CHCAT-Docs/:path',
       text: 'Edit this page on GitHub'

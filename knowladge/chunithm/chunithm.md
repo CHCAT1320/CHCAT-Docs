@@ -106,194 +106,214 @@ TUTORIAL	0
   文件中可能存在类似 END 的结束标签，可直接忽略它们，对谱面功能无影响。
   :::
 
-### NOTES
-- **TAP** `Int` `Int` `Int` `Int`  
-  格式：`TAP\tmeasure\toffset\tcell\twidth`  
-  TAP 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度
-  :::tip
-  轨道编号 0～15，宽度值为占用轨道数（1 = 一个轨道宽度），音符宽度 = $\frac{W}{16} \times$ 宽度
-  :::
-  ![](tap.png)
+## NOTES
 
-- **CHR** `Int` `Int` `Int` `Int` `String`  
-  格式：`CHR\tmeasure\toffset\tcell\twidth\tanimation`  
-  CHR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为打击后动画效果
-  :::tip
-  打击时必定判定为 CRITICAL JUSTICE，带有特殊动画效果。  
-  UP 从下往上  
-  DW 从上往下  
-  CE 向判定面  
-  LS 从右往左  
-  RS 从左往右  
-  LC 逆时针旋转  
-  RC 顺时针旋转
-  :::
-  ![](chr.png)
+### TAP
 
-- **HLD** `Int` `Int` `Int` `Int` `Int` `String`  
-  格式：`HLD\tmeasure\toffset\tcell\twidth\tduration\tanimation` 或 `HLD\tmeasure\toffset\tcell\twidth\tduration`  
-  HLD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为持续时间，第六项为打击后动画效果
-  :::tip
-  动画效果与 CHR 相同，若该项为None则无动画效果
-  :::
-  ![](hld.png)
+格式：`TAP\tmeasure\toffset\tcell\twidth`  
+TAP 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度
+:::tip
+轨道编号 0～15，宽度值为占用轨道数（1 = 一个轨道宽度），音符宽度 = $\frac{W}{16} \times$ 宽度
+:::
+![](tap.png)
 
-- **HXD** `Int` `Int` `Int` `Int` `Int` `String`  
-  格式：`HXD\tmeasure\toffset\tcell\twidth\tduration\tanimation`  
-  HXD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为持续时间，第六项为打击后动画效果
-  :::tip
-  动画效果与 CHR 相同，若该项为None则无动画效果
+### CHR
 
-  HXD为 LUMINOUS 新增内容。与 HLD 格式完全相同，但头部为 ExTap（打击必 CRITICAL JUSTICE）。替代了旧版"CHR+HLD 叠加"的写法。
-  :::
-  ![](hxd.png)
+格式：`CHR\tmeasure\toffset\tcell\twidth\tanimation`  
+CHR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为打击后动画效果
+:::tip
+打击时必定判定为 CRITICAL JUSTICE，带有特殊动画效果。  
+UP 从下往上  
+DW 从上往下  
+CE 向判定面  
+LS 从右往左  
+RS 从左往右  
+LC 逆时针旋转  
+RC 顺时针旋转
+:::
+![](chr.png)
 
-- **SLD** `Int` `Int` `Int` `Int` `Int` `Int` `Int` `String` `String`  
-  格式：`SLD\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
-  SLD 音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
-  :::tip
-  动画效果与 CHR 相同，若该项为None则无动画效果
-  :::
-  ![](sldh.png)
+### HLD
 
-- **SLC** `Int` `Int` `Int` `Int` `Int` `Int` `Int` `String` `String`   
-  格式：`SLC\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
-  SLC 为 SLD音符的控制点，不是一个音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
-  :::tip
-  动画效果与 CHR 相同，若该项为None则无动画效果
-  :::  
-  控制点无图片  
-  :::tip SLD音符的基本组成
-  起点	SLD	滑条开始位置，玩家需要打击并按住  
-  控制点	SLC	滑条路径上的拐点，玩家改变移动方向  
-  终点	最后一个 SLC 或 SLD	滑条结束位置，若结尾是 SLC 则末尾无蓝色音符，若结尾是 SLD 则末尾有蓝色音符
-  ![](sld.png)
-  :::
+格式：`HLD\tmeasure\toffset\tcell\twidth\tduration\tanimation` 或 `HLD\tmeasure\toffset\tcell\twidth\tduration`  
+HLD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为持续时间，第六项为打击后动画效果
+:::tip
+动画效果与 CHR 相同，若该项为None则无动画效果
+:::
+![](hld.png)
 
-- **SXD** `Int` `Int` `Int` `Int` `Int` `Int` `Int` `String` `String`   
-  格式：`SXD\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
-  头部为 ExTap（打击必 CRITICAL JUSTICE）的 SLD音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
-  :::tip
-  动画效果与 CHR 相同
-  :::
-  ![](sxd.png)
+### HXD
 
-- **SXC** `Int` `Int` `Int` `Int` `Int` `Int` `Int` `String` `String`   
-  格式：`SXC\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
-  SXD 音符的控制点，不是一个音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
-  :::tip
-  动画效果与 CHR 相同
-  :::
-  :::tip SXD音符的基本组成
-  与 SLD 音符相同，但头部为 ExTap（打击必 CRITICAL JUSTICE）  
-  起点	SXD	滑条开始位置，玩家需要打击并按住  
-  控制点	SXC	滑条路径上的拐点，玩家改变移动方向  
-  终点	最后一个 SXC 或 SXD	滑条结束位置，若结尾是 SXC 则末尾无黄色音符，若结尾是 SXD 则末尾有黄色音符
-  :::
+格式：`HXD\tmeasure\toffset\tcell\twidth\tduration\tanimation`  
+HXD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为持续时间，第六项为打击后动画效果
+:::tip
+动画效果与 CHR 相同，若该项为None则无动画效果
 
-- **FLK** `Int` `Int` `Int` `Int` `String`  
-  格式：`FLK\tmeasure\toffset\tcell\twidth\tL`  
-  FLK 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项作用不明，始终为`L`
-  :::tip
-  向任意方向滑动即可击中。第五项字段固定为L，不代表左右方向。
-  :::
-  ![](flk.png)
+HXD为 LUMINOUS 新增内容。与 HLD 格式完全相同，但头部为 ExTap（打击必 CRITICAL JUSTICE）。替代了旧版"CHR+HLD 叠加"的写法。
+:::
+![](hxd.png)
 
-- **AIR** `Int` `Int` `Int` `Int` `String`  
-  格式：`AIR\tmeasure\toffset\tcell\twidth\ttarget_note`
-  AIR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
-  :::tip
-  打击绑定的音符后立刻向上抬手。  
-  target_note 为绑定的音符类型，其格式如`TAP`  
-  到目前为止，未出现没有绑定地面音符的 AIR 音符
-  :::
-  ![](air.png)
+### SLD
 
-- **AUR** `Int` `Int` `Int` `Int` `String`  
-  格式：`AUR\tmeasure\toffset\tcell\twidth\ttarget_note`
-  AUR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
-  :::tip
-  打击绑定的音符后立刻向右上方抬手。  
-  target_note 为绑定的音符类型，其格式如`TAP`  
-  到目前为止，未出现没有绑定地面音符的 AUR 音符
-  :::
-  ![](aur.png)
+格式：`SLD\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
+SLD 音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
+:::tip
+动画效果与 CHR 相同，若该项为None则无动画效果
+:::
+![](sldh.png)
 
-- **AUL** `Int` `Int` `Int` `Int` `String`  
-  格式：`AUL\tmeasure\toffset\tcell\twidth\ttarget_note`
-  AUL 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
-  :::tip
-  打击绑定的音符后立刻向左上方抬手。  
-  target_note 为绑定的音符类型，其格式如`TAP`  
-  到目前为止，未出现没有绑定地面音符的 AUL 音符
-  :::
-  ![](aul.png)
+### SLC
 
-- **ADW** `Int` `Int` `Int` `Int` `String`  
-  格式：`ADW\tmeasure\toffset\tcell\twidth\ttarget_note`
-  ADW 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
-  :::tip
-  打击绑定的音符后立刻向下挥。  
-  target_note 为绑定的音符类型，其格式如`TAP`  
-  到目前为止，未出现没有绑定地面音符的 ADW 音符
-  :::
-  ![](adw.png)
+格式：`SLC\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
+SLC 为 SLD音符的控制点，不是一个音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
+:::tip
+动画效果与 CHR 相同，若该项为None则无动画效果
+:::  
+控制点无图片  
+:::tip SLD音符的基本组成
+起点	SLD	滑条开始位置，玩家需要打击并按住  
+控制点	SLC	滑条路径上的拐点，玩家改变移动方向  
+终点	最后一个 SLC 或 SLD	滑条结束位置，若结尾是 SLC 则末尾无蓝色音符，若结尾是 SLD 则末尾有蓝色音符
+![](sld.png)
+:::
 
-- **ADR** `Int` `Int` `Int` `Int` `String`  
-  格式：`ADR\tmeasure\toffset\tcell\twidth\ttarget_note`
-  ADR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
-  :::tip
-  打击绑定的音符后立刻向右下挥。  
-  target_note 为绑定的音符类型，其格式如`TAP`  
-  到目前为止，未出现没有绑定地面音符的 ADR 音符
-  :::
-  ![](adr.png)
+### SXD
 
-- **ADL** `Int` `Int` `Int` `Int` `String`  
-  格式：`ADL\tmeasure\toffset\tcell\twidth\ttarget_note`
-  ADL 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
-  :::tip
-  打击绑定的音符后立刻向左下挥。  
-  target_note 为绑定的音符类型，其格式如`TAP`  
-  到目前为止，未出现没有绑定地面音符的 ADL 音符
-  :::
-  ![](adl.png)
+格式：`SXD\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
+头部为 ExTap（打击必 CRITICAL JUSTICE）的 SLD音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
+:::tip
+动画效果与 CHR 相同
+:::
+![](sxd.png)
 
-- **AHD** `Int` `Int` `Int` `Int` `String` `Int`  
-  格式：AHD\tmeasure\toffset\tcell\twidth\ttarget_note\tduration  
-  AHD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符，第六项为持续时间
-  :::tip
-  target_note 为绑定的音符类型，其格式如`TAP`  
-  到目前为止，未出现没有绑定地面音符的 AHD 音符  
-  该音符会在起点处显示一个 AIR 音符，然后在末尾处显示一个 ASD 音符
-  :::
-  ![](ahd.png)
+### SXC
 
-- **ASC** `Int` `Int` `Int` `Int` `String` `Float` `Int` `Int` `Int` `Float` `String`  
-  格式：`ASC\tmeasure\toffset\tcell\twidth\ttarget_note\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`  
-  ASC 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
-  :::tip
-  target_note 为绑定的音符类型，其格式如`TAP`  
-  到目前为止，未出现没有绑定地面音符的 ASC 音符  
-  该音符会在起点处显示一个 AIR 音符，并显示轨迹
-  :::
-  ![](asc.png)
+格式：`SXC\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
+SXD 音符的控制点，不是一个音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
+:::tip
+动画效果与 CHR 相同
+:::
+:::tip SXD音符的基本组成
+与 SLD 音符相同，但头部为 ExTap（打击必 CRITICAL JUSTICE）  
+起点	SXD	滑条开始位置，玩家需要打击并按住  
+控制点	SXC	滑条路径上的拐点，玩家改变移动方向  
+终点	最后一个 SXC 或 SXD	滑条结束位置，若结尾是 SXC 则末尾无黄色音符，若结尾是 SXD 则末尾有黄色音符
+:::
 
-- **ASD** `Int` `Int` `Int` `Int` `String` `Float` `Int` `Int` `Int` `Float` `String`  
-  格式：`ASD\tmeasure\toffset\tcell\twidth\ttarget_note\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`  
-  ASD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是 ASC ASD 音符，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
-  :::tip
-  target_note 为绑定的音符类型，其格式如`ASC`  
-  到目前为止，未出现没有绑定 ASC ASD 音符的 ASD 音符  
-  :::
-  ![](asd.png)
+### FLK
 
-- **ALD** `Int` `Int` `Int` `Int` `Int` `Float` `Int` `Int` `Int` `Float` `String`  
-  格式：`ALD\tmeasure\toffset\tcell\twidth\tinterval\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`
-  ALD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为间隔，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
-  :::tip
-  其中`interval` 为间隔时间，单位和谱面分辨率相同  
-  若该值为0，则表示一条装饰线，若该值不等于0，那么按照间隔生成紫色挥手音符。
-  若该值为38400，则只会在开始时生成一个紫色挥手音符。
-  :::
-  ![](ald.png)
+格式：`FLK\tmeasure\toffset\tcell\twidth\tL`  
+FLK 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项作用不明，始终为`L`
+:::tip
+向任意方向滑动即可击中。第五项字段固定为L，不代表左右方向。
+:::
+![](flk.png)
+
+### AIR
+
+格式：`AIR\tmeasure\toffset\tcell\twidth\ttarget_note`
+AIR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
+:::tip
+打击绑定的音符后立刻向上抬手。  
+target_note 为绑定的音符类型，其格式如`TAP`  
+到目前为止，未出现没有绑定地面音符的 AIR 音符
+:::
+![](air.png)
+
+### AUR
+
+格式：`AUR\tmeasure\toffset\tcell\twidth\ttarget_note`
+AUR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
+:::tip
+打击绑定的音符后立刻向右上方抬手。  
+target_note 为绑定的音符类型，其格式如`TAP`  
+到目前为止，未出现没有绑定地面音符的 AUR 音符
+:::
+![](aur.png)
+
+### AUL
+
+格式：`AUL\tmeasure\toffset\tcell\twidth\ttarget_note`
+AUL 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
+:::tip
+打击绑定的音符后立刻向左上方抬手。  
+target_note 为绑定的音符类型，其格式如`TAP`  
+到目前为止，未出现没有绑定地面音符的 AUL 音符
+:::
+![](aul.png)
+
+### ADW
+
+格式：`ADW\tmeasure\toffset\tcell\twidth\ttarget_note`
+ADW 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
+:::tip
+打击绑定的音符后立刻向下挥。  
+target_note 为绑定的音符类型，其格式如`TAP`  
+到目前为止，未出现没有绑定地面音符的 ADW 音符
+:::
+![](adw.png)
+
+### ADR
+
+格式：`ADR\tmeasure\toffset\tcell\twidth\ttarget_note`
+ADR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
+:::tip
+打击绑定的音符后立刻向右下挥。  
+target_note 为绑定的音符类型，其格式如`TAP`  
+到目前为止，未出现没有绑定地面音符的 ADR 音符
+:::
+![](adr.png)
+
+### ADL
+
+格式：`ADL\tmeasure\toffset\tcell\twidth\ttarget_note`
+ADL 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
+:::tip
+打击绑定的音符后立刻向左下挥。  
+target_note 为绑定的音符类型，其格式如`TAP`  
+到目前为止，未出现没有绑定地面音符的 ADL 音符
+:::
+![](adl.png)
+
+### AHD
+
+格式：AHD\tmeasure\toffset\tcell\twidth\ttarget_note\tduration  
+AHD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符，第六项为持续时间
+:::tip
+target_note 为绑定的音符类型，其格式如`TAP`  
+到目前为止，未出现没有绑定地面音符的 AHD 音符  
+该音符会在起点处显示一个 AIR 音符，然后在末尾处显示一个 ASD 音符
+:::
+![](ahd.png)
+
+### ASC
+
+格式：`ASC\tmeasure\toffset\tcell\twidth\ttarget_note\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`  
+ASC 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
+:::tip
+target_note 为绑定的音符类型，其格式如`TAP`  
+到目前为止，未出现没有绑定地面音符的 ASC 音符  
+该音符会在起点处显示一个 AIR 音符，并显示轨迹
+:::
+![](asc.png)
+
+### ASD
+
+格式：`ASD\tmeasure\toffset\tcell\twidth\ttarget_note\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`  
+ASD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是 ASC ASD 音符，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
+:::tip
+target_note 为绑定的音符类型，其格式如`ASC`  
+到目前为止，未出现没有绑定 ASC ASD 音符的 ASD 音符  
+:::
+![](asd.png)
+
+### ALD
+
+格式：`ALD\tmeasure\toffset\tcell\twidth\tinterval\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`
+ALD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为间隔，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
+:::tip
+其中`interval` 为间隔时间，单位和谱面分辨率相同  
+若该值为0，则表示一条装饰线，若该值不等于0，那么按照间隔生成紫色挥手音符。
+若该值为38400，则只会在开始时生成一个紫色挥手音符。
+:::
+![](ald.png)

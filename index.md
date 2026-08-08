@@ -14,8 +14,8 @@ hero:
   actions:
     - theme: brand
       text: 知识
-      link: /knowladge/index.md
+      link: /knowladge/
     - theme: alt
       text: 项目
-      link: /objects/index.md
+      link: /objects/
 ---
