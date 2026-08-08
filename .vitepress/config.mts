@@ -90,7 +90,8 @@ export default defineConfig({
             text: 'CHUNITHM',
             collapsed: false,
             items: [
-              { text: 'CHUNITHM谱面格式说明', link: '/knowladge/chunithm/chunithm.md' }
+              { text: '谱面格式说明', link: '/knowladge/chunithm/chunithm.md' },
+              { text: '时间转换', link: '/knowladge/chunithm/time-conversion.md' }
             ]
           }
         ]

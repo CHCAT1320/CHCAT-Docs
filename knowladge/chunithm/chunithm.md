@@ -2,6 +2,8 @@
 
 chunithm 是由 SEGA 开发的音乐游戏，本文档主要介绍 CHUNITHM 的谱面文件格式。
 
+[时间转换工具](./time-conversion.md)
+
 ## 概念
 :::warning
 以下概念为笔者设定仅方便理解，不代表官方定义。
