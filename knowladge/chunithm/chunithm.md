@@ -112,6 +112,8 @@ TUTORIAL	0
 
 ### TAP
 
+字段类型：`Int` `Int` `Int` `Int`
+
 格式：`TAP\tmeasure\toffset\tcell\twidth`  
 TAP 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度
 :::tip
@@ -120,6 +122,8 @@ TAP 音符，第一项为小节号，第二项为小节内偏移量，第三项�
 ![](tap.png)
 
 ### CHR
+
+字段类型：`Int` `Int` `Int` `Int` `String`
 
 格式：`CHR\tmeasure\toffset\tcell\twidth\tanimation`  
 CHR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为打击后动画效果
@@ -137,6 +141,8 @@ RC 顺时针旋转
 
 ### HLD
 
+字段类型：`Int` `Int` `Int` `Int` `Int` `String`
+
 格式：`HLD\tmeasure\toffset\tcell\twidth\tduration\tanimation` 或 `HLD\tmeasure\toffset\tcell\twidth\tduration`  
 HLD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为持续时间，第六项为打击后动画效果
 :::tip
@@ -145,6 +151,8 @@ HLD 音符，第一项为小节号，第二项为小节内偏移量，第三项�
 ![](hld.png)
 
 ### HXD
+
+字段类型：`Int` `Int` `Int` `Int` `Int` `String`
 
 格式：`HXD\tmeasure\toffset\tcell\twidth\tduration\tanimation`  
 HXD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为持续时间，第六项为打击后动画效果
@@ -157,6 +165,8 @@ HXD为 LUMINOUS 新增内容。与 HLD 格式完全相同，但头部为 ExTap�
 
 ### SLD
 
+字段类型：`Int` `Int` `Int` `Int` `Int` `Int` `Int` `String` `String`
+
 格式：`SLD\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
 SLD 音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
 :::tip
@@ -165,6 +175,8 @@ SLD 音符，第一项为小节号，第二项为小节内偏移量，第三项�
 ![](sldh.png)
 
 ### SLC
+
+字段类型：`Int` `Int` `Int` `Int` `Int` `Int` `Int` `String` `String`
 
 格式：`SLC\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
 SLC 为 SLD音符的控制点，不是一个音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
@@ -181,6 +193,8 @@ SLC 为 SLD音符的控制点，不是一个音符，第一项为小节号，第
 
 ### SXD
 
+字段类型：`Int` `Int` `Int` `Int` `Int` `Int` `Int` `String` `String`
+
 格式：`SXD\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
 头部为 ExTap（打击必 CRITICAL JUSTICE）的 SLD音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
 :::tip
@@ -189,6 +203,8 @@ SLC 为 SLD音符的控制点，不是一个音符，第一项为小节号，第
 ![](sxd.png)
 
 ### SXC
+
+字段类型：`Int` `Int` `Int` `Int` `Int` `Int` `Int` `String` `String`
 
 格式：`SXC\tmeasure\toffset\tcell\twidth\tduration\tend_cell\tend_width\t\tanimation`  
 SXD 音符的控制点，不是一个音符，第一项为小节号，第二项为小节内偏移量，第三项为起始所在轨道，第四项为起始宽度，第五项为持续时间，第六项为结束所在轨道，第七项为结束宽度，第八项作用不明，通常为""，第九项为打击后动画效果
@@ -204,6 +220,8 @@ SXD 音符的控制点，不是一个音符，第一项为小节号，第二项�
 
 ### FLK
 
+字段类型：`Int` `Int` `Int` `Int` `String`
+
 格式：`FLK\tmeasure\toffset\tcell\twidth\tL`  
 FLK 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项作用不明，始终为`L`
 :::tip
@@ -212,6 +230,8 @@ FLK 音符，第一项为小节号，第二项为小节内偏移量，第三项�
 ![](flk.png)
 
 ### AIR
+
+字段类型：`Int` `Int` `Int` `Int` `String`
 
 格式：`AIR\tmeasure\toffset\tcell\twidth\ttarget_note`
 AIR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
@@ -224,6 +244,8 @@ target_note 为绑定的音符类型，其格式如`TAP`
 
 ### AUR
 
+字段类型：`Int` `Int` `Int` `Int` `String`
+
 格式：`AUR\tmeasure\toffset\tcell\twidth\ttarget_note`
 AUR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
 :::tip
@@ -234,6 +256,8 @@ target_note 为绑定的音符类型，其格式如`TAP`
 ![](aur.png)
 
 ### AUL
+
+字段类型：`Int` `Int` `Int` `Int` `String`
 
 格式：`AUL\tmeasure\toffset\tcell\twidth\ttarget_note`
 AUL 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
@@ -246,6 +270,8 @@ target_note 为绑定的音符类型，其格式如`TAP`
 
 ### ADW
 
+字段类型：`Int` `Int` `Int` `Int` `String`
+
 格式：`ADW\tmeasure\toffset\tcell\twidth\ttarget_note`
 ADW 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
 :::tip
@@ -256,6 +282,8 @@ target_note 为绑定的音符类型，其格式如`TAP`
 ![](adw.png)
 
 ### ADR
+
+字段类型：`Int` `Int` `Int` `Int` `String`
 
 格式：`ADR\tmeasure\toffset\tcell\twidth\ttarget_note`
 ADR 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
@@ -268,6 +296,8 @@ target_note 为绑定的音符类型，其格式如`TAP`
 
 ### ADL
 
+字段类型：`Int` `Int` `Int` `Int` `String`
+
 格式：`ADL\tmeasure\toffset\tcell\twidth\ttarget_note`
 ADL 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符
 :::tip
@@ -278,6 +308,8 @@ target_note 为绑定的音符类型，其格式如`TAP`
 ![](adl.png)
 
 ### AHD
+
+字段类型：`Int` `Int` `Int` `Int` `String` `Int`
 
 格式：AHD\tmeasure\toffset\tcell\twidth\ttarget_note\tduration  
 AHD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符，第六项为持续时间
@@ -290,6 +322,8 @@ target_note 为绑定的音符类型，其格式如`TAP`
 
 ### ASC
 
+字段类型：`Int` `Int` `Int` `Int` `String` `Float` `Int` `Int` `Int` `Float` `String`
+
 格式：`ASC\tmeasure\toffset\tcell\twidth\ttarget_note\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`  
 ASC 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是地面上的音符，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
 :::tip
@@ -301,6 +335,8 @@ target_note 为绑定的音符类型，其格式如`TAP`
 
 ### ASD
 
+字段类型：`Int` `Int` `Int` `Int` `String` `Float` `Int` `Int` `Int` `Float` `String`
+
 格式：`ASD\tmeasure\toffset\tcell\twidth\ttarget_note\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`  
 ASD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为可依附的目标音符，必须是 ASC ASD 音符，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
 :::tip
@@ -310,6 +346,8 @@ target_note 为绑定的音符类型，其格式如`ASC`
 ![](asd.png)
 
 ### ALD
+
+字段类型：`Int` `Int` `Int` `Int` `Int` `Float` `Int` `Int` `Int` `Float` `String`
 
 格式：`ALD\tmeasure\toffset\tcell\twidth\tinterval\tstarting_height\tduration\tend_cell\tend_width\ttarget_height\tcolor`
 ALD 音符，第一项为小节号，第二项为小节内偏移量，第三项为所在轨道，第四项为宽度，第五项为间隔，第六项为起始高度，第七项为持续时间，第八项为结束所在轨道，第九项为结束宽度，第十项为结束高度，第十一项为颜色
