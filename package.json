@@ -7,9 +7,14 @@
   },
   "dependencies": {
     "markdown-it-katex": "^2.0.3",
-    "vitepress": "^1.6.4"
+    "mermaid": "^11.17.2",
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-mermaid": "^2.0.17"
   },
   "devDependencies": {
-    "@vuepress/plugin-markdown-math": "^2.0.0-rc.112"
+    "@nolebase/vitepress-plugin-highlight-targeted-heading": "^2.18.2",
+    "@vuepress/plugin-markdown-math": "^2.0.0-rc.112",
+    "vitepress-plugin-nprogress": "^0.1.1",
+    "vitepress-plugin-tabs": "^0.9.1"
   }
 }

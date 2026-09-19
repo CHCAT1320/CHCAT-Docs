@@ -1,4 +1,6 @@
 import { defineConfig } from 'vitepress'
+import { withMermaid } from 'vitepress-plugin-mermaid'
+import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs'
 import markdownItKatex from 'markdown-it-katex'
 
 const customElements = [
@@ -46,7 +48,7 @@ const customElements = [
 ];
 
 // https://vitepress.dev/reference/site-config
-export default defineConfig({
+export default withMermaid(defineConfig({
   title: "chcat-docs",
   description: "冰猫の御用docs",
   lang: 'zh-CN',
@@ -55,7 +57,32 @@ export default defineConfig({
   markdown: {
     config: (md) => {
       md.use(markdownItKatex)
+      md.use(tabsMarkdownPlugin)
     },
+  },
+  mermaid: {
+    flowchart: {
+      htmlLabels: true,
+      useMaxWidth: true,
+      wrappingWidth: 200,
+      nodeSpacing: 40,
+      rankSpacing: 50,
+      padding: 16
+    }
+  },
+  vite: {
+    optimizeDeps: {
+      include: [
+        'fastdom',
+        'fastdom/extensions/fastdom-promised.js'
+      ]
+    },
+    ssr: {
+      noExternal: [
+        '@nolebase/vitepress-plugin-highlight-targeted-heading',
+        'vitepress-plugin-nprogress'
+      ]
+    }
   },
   vue: {
       template: {
@@ -67,7 +94,7 @@ export default defineConfig({
   themeConfig: {
     // https://vitepress.dev/reference/default-theme-config
     nav: [
-      { text: 'Home', link: '/' },
+      { text: '首页', link: '/' },
       { text: '知识', link: '/knowladge/' },
       { text: '项目', link: '/objects/' },
     ],
@@ -81,9 +108,32 @@ export default defineConfig({
             text: 'Rizline',
             collapsed: false,
             items: [
-              { text: 'Rizline谱面格式说明', link: '/knowladge/rizline/rizline.md' },
-              { text: '缓动类型', link: '/knowladge/rizline/easeType.md' },
-              { text: 'CH-RZL-EDIT谱面格式说明', link: '/knowladge/rizline/cre.md' }
+              {
+                text: '谱面',
+                collapsed: false,
+                items: [
+                  { text: '谱面格式', link: '/knowladge/rizline/rizline.md' },
+                  { text: '缓动类型', link: '/knowladge/rizline/easeType.md' },
+                  { text: 'CH-RZL-EDIT', link: '/knowladge/rizline/cre.md' }
+                ]
+              },
+              {
+                text: '移动端',
+                collapsed: false,
+                items: [
+                  { text: '资源获取', link: '/knowladge/rizline/mobile/assets.md' },
+                  { text: '存档', link: '/knowladge/rizline/mobile/save.md' },
+                  { text: '其它 API', link: '/knowladge/rizline/mobile/api.md' }
+                ]
+              },
+              {
+                text: 'PC',
+                collapsed: false,
+                items: [
+                  { text: '资源获取', link: '/knowladge/rizline/pc/assets.md' },
+                  { text: '存档', link: '/knowladge/rizline/pc/save.md' }
+                ]
+              }
             ]
           },
           {
@@ -155,5 +205,5 @@ export default defineConfig({
       }
     }
   }
-})
+}))
 

@@ -52,3 +52,19 @@
   margin: 1em 0 !important;
   overflow: auto hidden !important;
 }
+
+.vp-doc .mermaid {
+  overflow-x: auto;
+  margin: 1rem 0;
+}
+
+.vp-doc .mermaid svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.vp-doc .mermaid .nodeLabel,
+.vp-doc .mermaid foreignObject,
+.vp-doc .mermaid .label {
+  overflow: visible;
+}

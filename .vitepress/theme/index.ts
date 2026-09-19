@@ -1,11 +1,24 @@
-// 导入默认主题
+import { h } from 'vue'
+import type { Theme } from 'vitepress'
 import DefaultTheme from 'vitepress/theme'
-// 导入全局样式
+import { enhanceAppWithTabs } from 'vitepress-plugin-tabs/client'
+import vitepressNprogress from 'vitepress-plugin-nprogress'
+import { NolebaseHighlightTargetedHeading } from '@nolebase/vitepress-plugin-highlight-targeted-heading/client'
 import 'katex/dist/katex.min.css'
+import 'vitepress-plugin-nprogress/lib/css/index.css'
+import '@nolebase/vitepress-plugin-highlight-targeted-heading/client/style.css'
 import './style.css'
 import './stylee.css'
 
 export default {
-  ...DefaultTheme,
-  // 其他主题配置...
-}
+  extends: DefaultTheme,
+  Layout: () => {
+    return h(DefaultTheme.Layout, null, {
+      'layout-top': () => h(NolebaseHighlightTargetedHeading)
+    })
+  },
+  enhanceApp(ctx) {
+    enhanceAppWithTabs(ctx.app)
+    vitepressNprogress(ctx)
+  }
+} satisfies Theme

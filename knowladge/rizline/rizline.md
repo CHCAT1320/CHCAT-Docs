@@ -11,7 +11,19 @@ Rizline谱面文件采用 `JSON` 格式储存， 可以使用任何文本编辑�
 :::
 
 ## 附加
-[过渡类型](./easeType.md)
+
+:::tabs key:rizline
+== 谱面
+- [缓动类型](./easeType.md)
+- [CH-RZL-EDIT](./cre.md)
+== 移动端
+- [资源获取](./mobile/assets.md)
+- [存档](./mobile/save.md)
+- [其它 API](./mobile/api.md)
+== PC
+- [资源获取](./pc/assets.md)
+- [存档](./pc/save.md)
+:::
 
 ## 定义
 
