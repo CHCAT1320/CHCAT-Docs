@@ -143,6 +143,36 @@ export default withMermaid(defineConfig({
               { text: '谱面格式说明', link: '/knowladge/chunithm/chunithm.md' },
               { text: '时间转换', link: '/knowladge/chunithm/time-conversion.md' }
             ]
+          },
+          {
+            text: 'UMIGURI',
+            collapsed: false,
+            items: [
+              { text: '逆向总览', link: '/knowladge/umiguri/' },
+              { text: 'LARC（app.larc）', link: '/knowladge/umiguri/larc.md' },
+              { text: 'UARC / UNA', link: '/knowladge/umiguri/uarc.md' },
+              { text: '游戏代码可读化', link: '/knowladge/umiguri/code.md' }
+            ]
+          },
+          {
+            text: '哔哩哔哩 API',
+            collapsed: true,
+            items: [
+              { text: '概述与调用方式', link: '/knowladge/bilibili/' },
+              { text: '视频', link: '/knowladge/bilibili/video.md' },
+              { text: '用户', link: '/knowladge/bilibili/user.md' },
+              { text: '番剧 / 影视 / 漫画', link: '/knowladge/bilibili/bangumi.md' },
+              { text: '直播', link: '/knowladge/bilibili/live.md' },
+              { text: '动态与图文', link: '/knowladge/bilibili/dynamic.md' },
+              { text: '专栏 / 音频 / 图集', link: '/knowladge/bilibili/article.md' },
+              { text: '评论与通用接口', link: '/knowladge/bilibili/comment.md' },
+              { text: '搜索 / 排行 / 热门', link: '/knowladge/bilibili/search.md' },
+              { text: '收藏夹', link: '/knowladge/bilibili/favorite.md' },
+              { text: '登录与凭据', link: '/knowladge/bilibili/account.md' },
+              { text: '活动 / 游戏 / 装扮 / 投票', link: '/knowladge/bilibili/activity.md' },
+              { text: '投稿与创作中心', link: '/knowladge/bilibili/upload.md' },
+              { text: '其它接口', link: '/knowladge/bilibili/misc.md' }
+            ]
           }
         ]
       },
