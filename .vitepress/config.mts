@@ -155,6 +155,22 @@ export default withMermaid(defineConfig({
             ]
           },
           {
+            text: 'Phigros',
+            collapsed: false,
+            items: [
+              { text: '第9章红区（BlockArea）', link: '/knowladge/phigros/' },
+              { text: '数据规格', link: '/knowladge/phigros/data.md' },
+              { text: '运行时行为', link: '/knowladge/phigros/behavior.md' },
+              { text: '渲染表现', link: '/knowladge/phigros/render.md' },
+              { text: '材质细节', link: '/knowladge/phigros/materials.md' },
+              { text: '代码（C#）', link: '/knowladge/phigros/code/' },
+              { text: '着色器（GLSL）', link: '/knowladge/phigros/shaders/' },
+              { text: '贴图资源', link: '/knowladge/phigros/tex/' },
+              { text: '块数据样本', link: '/knowladge/phigros/blockAreaList.md' },
+              { text: '材质参数', link: '/knowladge/phigros/block-params.md' }
+            ]
+          },
+          {
             text: '哔哩哔哩 API',
             collapsed: true,
             items: [

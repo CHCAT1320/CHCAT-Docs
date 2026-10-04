@@ -33,6 +33,19 @@
 - [UARC / UNA](./umiguri/uarc.md)
 - [游戏代码可读化](./umiguri/code.md)
 
+## Phigros
+
+- [第9章红区（BlockArea 块系统）](./phigros/index.md)
+- [数据规格](./phigros/data.md)
+- [运行时行为](./phigros/behavior.md)
+- [渲染表现](./phigros/render.md)
+- [材质细节](./phigros/materials.md)
+- [代码（C#）](./phigros/code/)
+- [着色器（GLSL）](./phigros/shaders/)
+- [贴图资源](./phigros/tex/)
+- [块数据样本](./phigros/blockAreaList.md)
+- [材质参数](./phigros/block-params.md)
+
 ## 哔哩哔哩 API
 
 - [概述与调用方式](./bilibili/index.md)
