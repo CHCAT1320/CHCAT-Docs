@@ -267,6 +267,44 @@ flowchart TB
 `subtractBlockMaterial` 把减块从场景色中扣除。
 :::
 
+### 固定管线状态（Blend / ZTest / ZWrite / Cull / ColorMask）
+
+**Blend 不属于 fragment shader**，因此不在 `compressedBlob → GLSL` 里，而在 **Shader 资产的
+`m_ParsedForm.m_SubShaders[i].m_Passes[j].m_State`**。从 `sharedassets12.assets` 直接读出
+（9 个块 shader，材质→shader pathID 见[材质表](#着色器清单)）：
+
+| shader | pass | Blend（src, dst） | BlendOp | ColorMask | ZTest | ZWrite | Cull |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| `Unlit/ActiveBlock`(38) | 0 | **`One, OneMinusSrcAlpha`** | Add | RGBA | Always | Off | Off |
+| `Unlit/BlockCompose`(40) | 0/1 | `One, Zero` | Add | RGBA | LEqual | Off | Off |
+| `Unlit/DisabledBlock`(39) | 0 | `One, One` | Add | RGBA | LEqual | Off | Off |
+| `Unlit/ReadyBlock`(36) | 0 | `SrcAlpha, One` | Add | RGBA | Always | Off | Off |
+| `Unlit/BlockSprite`(37) | 0 | `SrcAlpha, One` | Add | RGBA | LEqual | Off | Off |
+| `Unlit/EdgeMask`(34) | 0 | `One, Zero` | Add | RGBA | Always | Off | Off |
+| | 1 | `One, Zero` | Add | **R** | Always | Off | Off |
+| `Unlit/GlowMask`(32) | 0 | `One, Zero` | Add | **RG** | Always | Off | Off |
+| | 1 | `One, Zero` | Add | **G** | Always | Off | Off |
+| `Unlit/TouchEffect`(33) | 0 | `One, One` | Add | RGBA | Always | Off | Off |
+| `Unlit/SubtractBlockBlender`(35) | 0/1 | `One, Zero` | Add | RGBA | LEqual | Off | Off |
+
+::: danger `Unlit/ActiveBlock` 是**预乘 alpha**，不是直通 alpha
+`ActiveBlock` 的固定状态是 **`Blend One OneMinusSrcAlpha`**（`srcBlend = One`），
+即 `dst = src + dst·(1 − srcA)`：
+
+- **不是** `SrcAlpha OneMinusSrcAlpha`（直通/straight alpha）；
+- fragment 输出的 `rgb` 需按 `a` **预乘**，否则边缘会偏亮/发光过强。
+- `SV_Target.w`（`glowAdj·_GlowIntensity + comp·_FillOpacity + edge·_EdgeOpacity`）
+  参与这条混合式；`ColMask = RGBA`，alpha 会写入 `CameraTarget`。
+
+这解释了「扭曲背景被填色覆盖」的现象：填色 rgb 直接相加，背景按 `(1−a)` 衰减。
+:::
+
+::: tip 解码与自洽性
+`colMask` = Unity `ColorWriteMask`（R=8/G=4/B=2/A=1）。`EdgeMask` pass1 只写 `R`
+（= `_EffectRT.x` 边缘）、`GlowMask` pass1 只写 `G`（= `_EffectRT.y` 辉光），与
+`ActiveBlock` 对 `_EffectRT.x/.y` 的读取完全对上。`ZWrite` 全 Off、`Cull` 全 Off。
+:::
+
 ### `Start` 的相机 / 材质绑定
 
 `BlockRender.Start`（VA `0x1D1BC4C`）在建完 13 张 RT 后，把它们绑到 7 台相机与 7 个材质。
@@ -1032,6 +1070,7 @@ uniform vec2 _TouchPos[10];
 
 | 版本 | 修正内容 |
 | --- | --- |
+| v19 | 新增[固定管线状态表](#固定管线状态blend--ztest--zwrite--cull--colormask)：从 Shader 资产 `m_ParsedForm.m_Passes[].m_State` 读出全部 9 个块 shader 的 **Blend/ZTest/ZWrite/Cull/ColorMask**；确认 `Unlit/ActiveBlock` = **`Blend One OneMinusSrcAlpha`（预乘 alpha）**，而非 `SrcAlpha OneMinusSrcAlpha` |
 | v18 | 新增 Mermaid 图：[渲染数据流](#rt-管线)（render.md）、[块生命周期状态图](./behavior#4-生命周期与阶段)（behavior.md） |
 | v17 | 订正 `*ReadyBlockRT`：**确有消费者**——`activeBlockMaterial`/`blockReadyMaterial` 把 `disabledNormalReadyBlockRT`/`disabledSubtractReadyBlockRT` 绑到 `_DisabledNormalBlockRT`/`_DisabledSubtractBlockRT`（纯预备遮罩）；`disabledNormalBlockRT`/`disabledSubtractBlockRT`（禁用+预备合并遮罩）供 `BlockCompose` prog2；`_ReadyComposeRT` = `composedDisabledBlockRT`（即 prog2 输出） |
 | v16 | 清空等价 C# 全部占位：泛型实参经 `ScriptMetadataMethod` 反查（`Instantiate<GameObject>`、`GetComponent<RectTransform/TouchBlockBehavior/PreviewBlockControl>`、`List<BlockArea>.get_Item`）；`RefreshSceneColorCommands` 第 2 段 = `Blit(None, CameraTarget, activeBlockMaterial)`（`BuiltinRenderTextureType`：None=0/CameraTarget=2）；`sinf`/`powf` 经 PLT→dynsym；`UpdateBlockAnimations` 的 anchor = `Vector2.one × 0.5` |
