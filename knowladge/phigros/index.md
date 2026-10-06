@@ -88,7 +88,6 @@ Unity 编译后的 GLSL ES 3.00。
 本文档不包含任何分析脚本（原脚本内含作者本机绝对路径，且依赖私有语料）。
 文档中出现的 `tools/_xxx.py` 仅是**分析过程的引用**，不随本文档提供。
 :::
-:::
 
 ## 复现顺序
 
@@ -97,15 +96,15 @@ Unity 编译后的 GLSL ES 3.00。
 1. **数据层** — 按 [`data.md`](./data.md) 解析 `blockAreaList`。
    验证：31 张含块谱面能全部读出，字段与本文档一致。
    不需要渲染。
-2. **时间轴与阶段** — 实现 [`behavior.md` 生命周期与阶段](./behavior#4-生命周期与阶段) 的分支，输出 `BlockPhase`。
+2. **时间轴与阶段** — 实现 [`behavior.md` 生命周期与阶段](./behavior#_4-生命周期与阶段) 的分支，输出 `BlockPhase`。
    验证：对 `Petrichor.voidMournfinale` 逐帧打印阶段，应与音轨上块的起止吻合。
-3. **几何** — 实现 [`behavior.md` 坐标转换与变换](./behavior#1-坐标转换)。
+3. **几何** — 实现 [`behavior.md` 坐标转换与变换](./behavior#_1-坐标转换)。
    验证：`transform.localPosition` / `localScale` 与预期矩形一致；隐藏态应落在 `x = 1000`。
-4. **缓动** — 按 [`behavior.md` 缓动](./behavior#2-时间与缓动) 生成 15×101 表。
+4. **缓动** — 按 [`behavior.md` 缓动](./behavior#_2-时间与缓动) 生成 15×101 表。
    **注意四种死表**（`3/6/9/13` 恒 0，`14` 恒 1）、`12` 的两处断点，
    以及 `12` 的 `47`~`49` 三点因构建期越界读**无法复现**。
    验证：`easeType 0` 与 `14` 在 `ハテ.rNFrums.AT` 中的表现应与原版一致。
-5. **触摸** — 实现 [`behavior.md` 命中判定与触摸](./behavior#5-命中判定与触摸)，**注意普通块外扩、减块内缩**。
+5. **触摸** — 实现 [`behavior.md` 命中判定与触摸](./behavior#_5-命中判定与触摸)，**注意普通块外扩、减块内缩**。
    验证：`Petrichor.voidMournfinale.IN` 的 427 个块逐个验证命中区。
 6. **音频** — BGM 低通 `22000 → 1500 Hz`，`0.25` s 扫频。
    验证：按住任一 Active 块时能听到压低。
@@ -120,7 +119,7 @@ Unity 编译后的 GLSL ES 3.00。
     :::
 
     建议顺序：先跑通第二个 program 确认遮罩合成正确，再补第一个 program 的扰动，
-    最后处理 `ActiveBlock`（25 KB，已逐段解析，见 [`render.md`](./render#unlitactiveblock--主着色器汇总合成)）。
+    最后处理 `ActiveBlock`（25 KB，已逐段解析，见 [`render.md`](./render#unlit-activeblock-—-主着色器汇总合成)）。
 
 ### 前置条件
 
@@ -174,27 +173,27 @@ Unity 编译后的 GLSL ES 3.00。
 | `GetGlowRingWeight` 的 epsilon | **不是**具名字段：实测为 `.rodata` 常量 `0.001`(`0xC26530`) 与 `1e-6`(`0xC26384`)；`glowWeightFalloff` 只是作为 `falloff` 参数传入，`glowPassWeightThreshold` 用在 `RenderEffects` 跳过低权轮次。材质 `_PassWeight = 0.0249` 仅交叉验证公式形式 |
 | 7 台相机的 layer mask | 已取得全部实测值（**以十进制为准**，见 [`render.md` 图层与相机](./render#图层与相机)） |
 | 材质常量 | 已读出 8 个材质的保存参数（`BlockRender` 持 7 个 + `subtractBlockMaterial` 挂在 3 个后处理上），见 [`block-params.json`](./block-params.md) |
-| RT 的 ping-pong 规则 | **已证实**：`RenderEffects` 每轮用 `stp`/`ext` 交换 `pingA`(`0x110`)/`pingB`(`0x118`)，见 [`render.md` LateUpdate](./render#lateupdate--rendereffects-实测顺序) |
-| 各 RT 的分辨率 | **已解**：`sceneColorRT = Screen/6`，块遮罩 = `Screen/8`，`effectRT`/ping = `Screen/4`（`BlockRender.Start` VA `0x1D1BC4C`），见 [`render.md` RT 尺寸](./render#rt-尺寸与格式反汇编实测) |
-| 低通滤波器 Q 值 | **已解**：`set_Q` 从未被调用，恒为 Unity 默认 `1.0`；按下/放开目标分别为 `lowPassCutoffFrequency` 与 `22000`，见 [`behavior.md` 音频](./behavior#6-音频) |
-| `SubtractBlockPostProcessor` | 已解：`if (cam.targetTexture == null) Blit(src,dest); else Blit(src,dest,material,targetPass)`，见 [`render.md`](./render#lateupdate--rendereffects-实测顺序) |
-| `disabledBlockReadyDuration` 用途 | **已解**：它是 `Ready` 窗口宽度（`enableTime − 0x5C ≤ τ < enableTime`），**并非未使用**；`disabledBlockShowDuration`(0x58) 才是 `DisabledBlockShow` 的颜色淡入时长。见 [`behavior.md` 生命周期](./behavior#4-生命周期与阶段) |
+| RT 的 ping-pong 规则 | **已证实**：`RenderEffects` 每轮用 `stp`/`ext` 交换 `pingA`(`0x110`)/`pingB`(`0x118`)，见 [`render.md` LateUpdate](./render#lateupdate-rendereffects-实测顺序) |
+| 各 RT 的分辨率 | **已解**：`sceneColorRT = Screen/6`，块遮罩 = `Screen/8`，`effectRT`/ping = `Screen/4`（`BlockRender.Start` VA `0x1D1BC4C`），见 [`render.md` RT 尺寸](./render#rt-尺寸与格式-反汇编实测) |
+| 低通滤波器 Q 值 | **已解**：`set_Q` 从未被调用，恒为 Unity 默认 `1.0`；按下/放开目标分别为 `lowPassCutoffFrequency` 与 `22000`，见 [`behavior.md` 音频](./behavior#_6-音频) |
+| `SubtractBlockPostProcessor` | 已解：`if (cam.targetTexture == null) Blit(src,dest); else Blit(src,dest,material,targetPass)`，见 [`render.md`](./render#lateupdate-rendereffects-实测顺序) |
+| `disabledBlockReadyDuration` 用途 | **已解**：它是 `Ready` 窗口宽度（`enableTime − 0x5C ≤ τ < enableTime`），**并非未使用**；`disabledBlockShowDuration`(0x58) 才是 `DisabledBlockShow` 的颜色淡入时长。见 [`behavior.md` 生命周期](./behavior#_4-生命周期与阶段) |
 | 阶段切换实现 | **已解**：`UpdateBlockActivation` **无** `if(!visible) return`，只在 `notInWindow` 切 `disabledLayer`；`readyLayer`/`enabledLayer` 由 `DisabledBlockReady` 协程设置 |
 | 事件缓动字段 | 已解：`MoveEvent`/`ScaleEvent` 有 **`easeTypeX`(0x1C) 与 `easeTypeY`(0x20)** 双缓动，分量各自插值；`RotateEvent` 用 `easeType`(0x1C)+`rotation`(0x20) |
 | `GetBlockGeometry` 返回 | `(size, center, anchorWorld)`（已按元组构造寄存器确认），见 [`code/PreviewBlockControl.decompiled.cs`](./code/PreviewBlockControl.decompiled.md) |
 | 膨胀半径如何实现 | `_DilateTexelSize = (1/w, 1/h, w, h)` 取自 `effectRT`，但只用 `.xy` 做 1-texel 偏移，**半径靠迭代轮数**；见 [`render.md`](./render#rt-管线) |
-| RT ↔ sampler 映射 | 见 [`render.md` RT 字段 ↔ 着色器 sampler 对照](./render#rt-字段--着色器-sampler-对照) |
-| 事件起点 / 时间基准 | `p = (progressControl.nowTime − 本事件 time) / (下一事件 time − 本事件 time)`，`easeType` 取自本事件，见 [`behavior.md` 查表与进度](./behavior#22-查表与进度) |
+| RT ↔ sampler 映射 | 见 [`render.md` RT 字段 ↔ 着色器 sampler 对照](./render#rt-字段-↔-着色器-sampler-对照) |
+| 事件起点 / 时间基准 | `p = (progressControl.nowTime − 本事件 time) / (下一事件 time − 本事件 time)`，`easeType` 取自本事件，见 [`behavior.md` 查表与进度](./behavior#_2-2-查表与进度) |
 | 每帧执行顺序 | `UpdateBlocksTransform` → `UpdateBlockActivation` → `UpdateBlockAnimations` → `DestroyAfterInterval` |
 | `isDragging` 的作用 | 为真时变换更新整段跳过，块保持编辑器拖好的位置 |
 | `PreviewBlockControl` 是否运行时 | 是。实例在 `sharedassets12.assets` pathID 374，与 `BlockRender` 同场景且启用 |
 | 音频滤波器挂载位置 | 挂在 **`ProgressControl`**（字段 `0xB8` `AudioLowPassFilter`，**早期误写 `0xC0`**），配 `LerpLowPassFilter` 协程；既非 `AudioSource` 也非 `AudioMixer` 组 |
 | 预备态 RT 为何无人读取 | 已解释：196/197 各渲染两个 layer，预备态与禁用态合并进同一张 RT |
 | 减块如何吃音符 | 已澄清：不吃判定，只是视觉扣除 + alpha `0.1` |
-| `wasVisible` / `idlePosition` 语义 | 已澄清，见 [`behavior.md` 命中判定与触摸](./behavior#5-命中判定与触摸) |
+| `wasVisible` / `idlePosition` 语义 | 已澄清，见 [`behavior.md` 命中判定与触摸](./behavior#_5-命中判定与触摸) |
 | 提取了多少 shader | 124 个程序；因重名落盘为 123 个文件 |
-| 事件索引选取规则 | 已解：`FindCurrentEventIndex` 返回 `[-1, Count-2]`，**严格大于**比较（相等时继续前移），见 [`behavior.md` 事件插值](./behavior#23-事件插值) |
-| 位移/缩放/旋转如何套到几何 | 已解：`UpdateMovement` 是**相对原始中心的增量**（`+=` 而非替换）；缩放/旋转**绕事件锚点**；详见 [`behavior.md` 变换](./behavior#3-变换) |
+| 事件索引选取规则 | 已解：`FindCurrentEventIndex` 返回 `[-1, Count-2]`，**严格大于**比较（相等时继续前移），见 [`behavior.md` 事件插值](./behavior#_2-3-事件插值) |
+| 位移/缩放/旋转如何套到几何 | 已解：`UpdateMovement` 是**相对原始中心的增量**（`+=` 而非替换）；缩放/旋转**绕事件锚点**；详见 [`behavior.md` 变换](./behavior#_3-变换) |
 | `SafeDiv` 调用点 | 已解：`UpdateScale` 中 `SafeDiv(next.scale, cur.scale)` 求相邻事件的缩放比 |
 | `UpdateScale` / `UpdateRotation` | 已解：逐事件把 `center` 绕锚点按比率缩放/旋转，`size = 插值scale × originalSize`、`rotation = 插值rotation`，见 [`code/PreviewBlockControl.decompiled.cs`](./code/PreviewBlockControl.decompiled.md) |
 | `RotateAroundAnchor` 守卫常量 | 已解：`s3` = **`Mathf.Epsilon`**(`1.401298E-45`)，阈值 `max(|Δ|·1e-6, 8·Epsilon)`，early-return **永不触发**（初版「第二项极大」的说法方向相反） |
@@ -206,7 +205,7 @@ Unity 编译后的 GLSL ES 3.00。
 | `DisabledBlockReady` / `DisabledBlockShow` 协程 | 已解：Ready 先切 `readyLayer` → `WaitForSeconds(disabledBlockReadyDuration)` → 切 `enabledLayer`；Show 按 `disabledBlockShowDuration` 线性淡入颜色（普通 `(1,1,1,0)→(1,1,1,1)`，减块 `(1,0,1,0.1)→(1,1,1,0.1)`） |
 | `TouchBlockBehavior.Animation` | 已解：`Vector3.Lerp(start,end,Clamp01(t/animationDuration))`；缩放起/终点 = **`Vector3.zero`**（静态单例 `0x413DAF0` → 元数据槽 `Vector3_TypeInfo` 首字段）；Hide 收尾时把 `position` 归到 `idlePosition` |
 | 缓动表是否与游戏一致 | 已由 `GetEase.Instantiation`（VA `0x1CAE478`）反汇编复核：`E[idx]=u^n`、`E[idx+1]=1-(1-u)^n`，`idx∈{1,4,7,10}`、`n=idx/3+2`；`3/6/9=0`、`12=分段`、`13=0`、`14=1` |
-| `Unlit/ActiveBlock` 完整解析 | 已逐段读出，见 [`render.md` ActiveBlock](./render#unlitactiveblock--主着色器汇总合成)：入口水平 `discard`、`_ReadyComposeRT` 预备亮度、火花 HSV 色相偏移、触摸 SDF 层、`glowAdj` / `alpha` 公式 |
+| `Unlit/ActiveBlock` 完整解析 | 已逐段读出，见 [`render.md` ActiveBlock](./render#unlit-activeblock-—-主着色器汇总合成)：入口水平 `discard`、`_ReadyComposeRT` 预备亮度、火花 HSV 色相偏移、触摸 SDF 层、`glowAdj` / `alpha` 公式 |
 | 材质 `_ST` / 贴图导入设置 | 已读出，见 [`materials.md`](./materials.md)。**全部 Point 过滤**；`_ST` 各向异性（`x ≠ y`）；active `_DisplaceMap` (0.8,0.3)、`_SparkMap` (3.0,1.2)、`_NoiseMap` (1.5,1.46)，compose `_DisplaceMap` (2.13,1.02)；`FD_Noise`/`BlockNoise1` 为 **Mirror**，仅 `PointNoise` 为 `Repeat` |
 
 ## 一句话结论

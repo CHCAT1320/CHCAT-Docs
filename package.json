@@ -12,6 +12,7 @@
     "vitepress-plugin-mermaid": "^2.0.17"
   },
   "devDependencies": {
+    "@mdit/plugin-katex-slim": "^0.23.2",
     "@nolebase/vitepress-plugin-highlight-targeted-heading": "^2.18.2",
     "@vuepress/plugin-markdown-math": "^2.0.0-rc.112",
     "vitepress-plugin-nprogress": "^0.1.1",

@@ -227,7 +227,6 @@ EaseInfos[14] = 1f;   // 全部置 1
 在这段区间会与原版不符。好在 `easeType 12` 在官谱中极少使用
 （`move` X 方向 8 次、`rotate` 4 次），实际影响有限。
 :::
-:::
 
 ::: warning 这是原版的真实行为
 `EaseInfor` 构造函数只做 `new float[101]`（零初始化），循环只覆盖索引 `1, 4, 7, 10` 及其后继，
@@ -527,7 +526,6 @@ AAPCS64 的参数分配规则是**浮点参数走 `v0`–`v7`、整数与指针�
 初版写「`x0` 是第一个**整型**参数」——AAPCS 并不要求指针参数前面先有整型参数，
 两者寄存器组独立。说成「第一个**指针**参数」才准确。结论（`s0` = cos）不变。
 :::
-:::
 
 `Mathf.Deg2Rad` 常数实测为 `0.017453292`（位于 `.rodata` `0xC34510`，
 由 `adrp 0xc34000 + 0x510` 得到）。
@@ -549,7 +547,6 @@ AAPCS64 的参数分配规则是**浮点参数走 `v0`–`v7`、整数与指针�
 初版说「第二项是一个**极大**的值，远大于任何合理角度」——**错误**。
 `Mathf.Epsilon` 是最小正浮点（denormal），第二项是**极小**值，守卫因此**从不进入**，
 而不是「总能拦住」。（结论「正常角度下不进入」碰巧对，但理由完全相反。）
-:::
 :::
 
 ### 3.3 安全除法
@@ -630,7 +627,7 @@ wasVisible = visible; wasReady = ready;
 1. **Ready 边界用 `disabledBlockReadyDuration`（`0x5C`），不是 `disabledBlockShowDuration`（`0x58`）**。
    `disabledBlockShowDuration` 只用于 `DisabledBlockShow` 协程的颜色淡入。
 2. **没有 `if (!visible) return;`**。该方法**每帧都跑到底**，隐藏态只是不启动协程；
-   `localPosition` 的移出由 [`UpdateBlocksTransform`](#12-块的摆放) 负责。
+   `localPosition` 的移出由 [`UpdateBlocksTransform`](#_1-2-块的摆放) 负责。
 3. **layer 三元表达式不在本方法里**。本方法只在 `notInWindow` 时切到 `disabledLayer`；
    `readyLayer` / `enabledLayer` 的赋值在 **`DisabledBlockReady` 协程**内（反汇编可见
    `LayerMask.NameToLayer` + `set_layer` 各两次），`DisabledBlockShow` 协程则做颜色淡入。
@@ -657,13 +654,13 @@ public bool IsActive(float t) => t >= enableTime && t < disableTime;
 ```
 
 即 `enableTime ≤ τ < disableTime`。`Disabled` 与 `Ready` 阶段纯为视觉预警，不参与判定。
-见[命中判定与触摸](#5-命中判定与触摸)。
+见[命中判定与触摸](#_5-命中判定与触摸)。
 :::
 
 ::: tip `touchLayer` 与隐藏态 layer
 `touchLayer` 不在此分支中——它属于触摸层的独立渲染路径。
 两个隐藏态由 `!visible` 提前返回处理，`localPosition` 则由
-[`UpdateBlocksTransform`](#12-块的摆放) 移到 `(1000, 0, 0)`。
+[`UpdateBlocksTransform`](#_1-2-块的摆放) 移到 `(1000, 0, 0)`。
 :::
 
 此外，两个一次性协程（`MoveNext` 反汇编实测）：

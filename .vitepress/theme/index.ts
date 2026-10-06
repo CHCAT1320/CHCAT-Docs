@@ -7,7 +7,6 @@ import { NolebaseHighlightTargetedHeading } from '@nolebase/vitepress-plugin-hig
 import 'katex/dist/katex.min.css'
 import 'vitepress-plugin-nprogress/lib/css/index.css'
 import '@nolebase/vitepress-plugin-highlight-targeted-heading/client/style.css'
-import './style.css'
 import './stylee.css'
 
 export default {

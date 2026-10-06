@@ -39,7 +39,7 @@ title: BlockArea 数据规格
     因此**不要**把块的秒值当作 T 代入谱面换算。
     :::
 
-- **p**：归一化进度，取值 `[0, 1]`，由[缓动表](./behavior#2-时间与缓动)查表得出。
+- **p**：归一化进度，取值 `[0, 1]`，由[缓动表](./behavior#_2-时间与缓动)查表得出。
 
     - ⚠️ 请勿与时间轴 **τ** 混淆。
 
@@ -161,7 +161,7 @@ title: BlockArea 数据规格
 
 ::: warning 这是纯数据类
 `GameInformation.BlockArea` 是 `[Serializable]` 的**纯数据类**，除 `Mirror()` 外不含任何执行逻辑。
-块的行为完全由 [`PreviewBlockControl`](#驱动者previewblockcontrol) 实现。
+块的行为完全由 [`PreviewBlockControl`](#驱动者-previewblockcontrol) 实现。
 :::
 
 - **topRightPercentage** `Vector2`（`0x10`）：块的**右上角**屏幕百分比坐标。
@@ -181,7 +181,7 @@ title: BlockArea 数据规格
     - 四者满足 `appearTime ≤ enableTime < disableTime ≤ disappearTime`。
 
     - 四者不必满足严格不等式；相等时对应阶段被跳过。行为后果见
-      [生命周期与阶段](./behavior#4-生命周期与阶段)。
+      [生命周期与阶段](./behavior#_4-生命周期与阶段)。
 
 - **isSubtract** `bool`（`0x30`）：是否为**减块**。
 
@@ -212,7 +212,7 @@ title: BlockArea 数据规格
 | --- | --- | --- | --- |
 | `0x10` | `anchor` | `Vector2` | 旋转锚点，单位 `P` |
 | `0x18` | `time` | `float` | 事件时刻，单位**秒** |
-| `0x1C` | `easeType` | `int` | 缓动类型，`0`~`14`。见[缓动类型表](./behavior#21-缓动类型表) |
+| `0x1C` | `easeType` | `int` | 缓动类型，`0`~`14`。见[缓动类型表](./behavior#_2-1-缓动类型表) |
 | `0x20` | `rotation` | `float` | **绝对**目标角度，单位度，逆时针为正 |
 
 ::: tip 绝对角度，不是增量
@@ -248,7 +248,7 @@ IL2CPP 声明为 `public Vector2 scale;`。`stepX` / `stepY` 是静态方法
 `ScaleAroundAnchor(Vector2 point, Vector2 anchor, float stepX, float stepY)` 的**形参名**，
 不是序列化字段名。复现数据结构时建议直接命名为 `scale` 以对齐原始字段。
 
-从形参名与 [`ScaleAroundAnchor`](./behavior#31-绕锚点缩放) 的用法看，它承担**倍率**角色
+从形参名与 [`ScaleAroundAnchor`](./behavior#_3-1-绕锚点缩放) 的用法看，它承担**倍率**角色
 （`1` 表示不缩放）。
 :::
 
@@ -318,7 +318,7 @@ bool ready = (enableTime - disabledBlockReadyDuration) <= now && now < enableTim
 初版两处称它是「上线前**完整**预警窗口（`Disabled` + `Ready` 合计）」，
 另一处却说「`Ready` 阶段的实际长度等于 `disabledBlockShowDuration`」——**自相矛盾**。
 
-按 [`behavior.md` 阶段表](./behavior#4-生命周期与阶段)：
+按 [`behavior.md` 阶段表](./behavior#_4-生命周期与阶段)：
 
 - `Ready` = `enableTime − showDuration ≤ τ < enableTime` → 长度**就是** `showDuration`
 - `Disabled` = `appearTime ≤ τ < enableTime − showDuration` → 长度由 `appearTime` 决定，**不受它控制**

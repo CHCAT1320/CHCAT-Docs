@@ -2,6 +2,33 @@
 
 > 源文件：`blockAreaList.json`
 
+## 格式说明
+
+`blockAreaList` 是谱面 JSON 的**顶层私有扩展字段**（与 `judgeLineList` 平级，不属于通用谱面格式），类型为数组，每个元素是一个块（`GameInformation.BlockArea`）。
+
+- 时间字段单位为**秒**（`float`），**不是**通用谱面格式的整数 `T`；
+- 坐标 `0` = 屏幕左下角，`1` = 右上角；
+- 字段偏移、类型与三类事件的完整定义见 [数据规格](./data.md#结构)。
+
+| 字段 | 类型 | 说明 |
+| --- | --- | --- |
+| `topRightPercentage` | `{ x, y }` | 块右上角屏幕百分比坐标。 |
+| `bottomLeftPercentage` | `{ x, y }` | 块左下角屏幕百分比坐标。 |
+| `appearTime` | number | 出现时刻（秒）。 |
+| `enableTime` | number | 生效时刻（秒）。 |
+| `disableTime` | number | 失效时刻（秒）。 |
+| `disappearTime` | number | 消失时刻（秒）。 |
+| `isSubtract` | bool | 是否**减块**（视觉扣除 + 触摸区内缩）。 |
+| `rotateEvents` | `RotateEvent[]` | 旋转事件：`anchor` / `time` / `easeType` / `rotation`（度，绝对）。 |
+| `moveEvents` | `MoveEvent[]` | 移动事件：`endPosition` / `time` / `easeTypeX` / `easeTypeY`。 |
+| `scaleEvents` | `ScaleEvent[]` | 缩放事件：`anchor` / `time` / `easeTypeX` / `easeTypeY` / `scale`（倍率）。 |
+
+> 缓动类型取值 `0`–`14`，见 [缓动类型表](./behavior.md#_2-1-缓动类型表)。
+
+本样本为 **c9s 剧情谱**：共 **48** 块（其中 **4** 个减块），时间约 58.6–67.6 s。
+
+## 原始数据
+
 ````json
 [
   {

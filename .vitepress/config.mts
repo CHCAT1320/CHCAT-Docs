@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress'
 import { withMermaid } from 'vitepress-plugin-mermaid'
 import { tabsMarkdownPlugin } from 'vitepress-plugin-tabs'
-import markdownItKatex from 'markdown-it-katex'
+import { katex } from '@mdit/plugin-katex-slim'
 
 const customElements = [
   "math",
@@ -56,7 +56,7 @@ export default withMermaid(defineConfig({
   base: '/',
   markdown: {
     config: (md) => {
-      md.use(markdownItKatex)
+      md.use(katex)
       md.use(tabsMarkdownPlugin)
     },
   },

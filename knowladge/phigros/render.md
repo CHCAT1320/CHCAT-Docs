@@ -104,7 +104,6 @@ screenWidth  = screenHeight * previewCam.aspect;        // = 10 * aspect ≈ 17.
 2. 初版称「1 世界单位 = 1 像素」——**错误**。`screenWidth/screenHeight` 是世界单位
    （≈`17.78 × 10`），不是像素；正因如此 `5.0` 才成立。
 :::
-:::
 
 场景中仅有 **2 个** `RenderTexture` 对象（`1920×1080` 与 `1920×1440`，后者是 3:4
 竖屏），与块系统无关——13 张块 RT 全部是 `CreateRenderTexture` 在运行时创建的。
@@ -533,7 +532,7 @@ float 属性仍会保留序列化值）。绑定它们不会产生任何效果�
 :::
 
 ::: tip 两条独立交叉验证
-- **`_PassWeight = 0.0249478`** 与[加权膨胀](#unlitglowmask--加权膨胀)算出的第 5 环权重
+- **`_PassWeight = 0.0249478`** 与[加权膨胀](#unlit-glowmask-—-加权膨胀)算出的第 5 环权重
   `0.0249` 吻合到 8 位有效数字。注意它是**构建时序列化的默认值**，不是运行时快照。
 - **`_ClampThreshold` 区间仅 `0.09`~`0.12`**，是一条很窄的过渡带。结合
   `k = clamp((t.y − 0.2) × −10, 0, 1)`，实际行为为：遮罩值落在 `[0.09, 0.12)`
@@ -567,7 +566,7 @@ float 属性仍会保留序列化值）。绑定它们不会产生任何效果�
 :::
 
 `SubtractBlockBlender` 的 `x` 在两阈值之间为 `1`、之外为 `0`，并叠加一项边缘抬升
-（见[下文](#unlitsubtractblockblender--双阈值阶跃--smoothstep)），故范围为 `[0, 2]`。
+（见[下文](#unlit-subtractblockblender-—-双阈值阶跃-×-smoothstep)），故范围为 `[0, 2]`。
 
 `BlockCompose` 用**通道相乘**再与禁用态相减：
 
@@ -609,7 +608,7 @@ SV_Target = vec2(abs(t), ds.y);
 | `effectRT` | `_EffectRT`（active） | ✅ `ActiveBlock`（像素中心对齐） |
 | `pingA` / `pingB` | —（CPU ping-pong） | ❌ 仅 CPU 侧交换 |
 
-绑定来源：`BlockRender.Start` 的 `SetTexture` 逐条实测，见 [Start 的相机/材质绑定](#start-的相机--材质绑定)。
+绑定来源：`BlockRender.Start` 的 `SetTexture` 逐条实测，见 [Start 的相机/材质绑定](#start-的相机-材质绑定)。
 
 ::: danger 初版对 `*ReadyBlockRT` 的结论是错的
 初版写「`disabledNormalReadyBlockRT` / `disabledSubtractReadyBlockRT` 不出现在任何 GLSL、
@@ -686,7 +685,6 @@ return 1f / glowRadius;
 发光永远退化成均匀 `1/R`，与实际权重表矛盾。两个具名字段确实存在，但分别用在别处：
 `glowWeightFalloff` 作为 `falloff` **参数**传入，`glowPassWeightThreshold` 用在 `RenderEffects`
 里跳过权重过低的轮次。
-:::
 :::
 
 与 Inspector 中的 Tooltip 一致：
@@ -967,7 +965,7 @@ SV_Target0.w = glowAdj * _GlowIntensity + comp * _FillOpacity + edge * _EdgeOpac
 
 ::: tip 与 `BlockCompose` 一样是「compose 填充 + edge + glow 加性」
 `rgb = fill*comp + edge项 + glow项`，与 `BlockCompose` program 2 的
-`fill*comp` 思路一致（见[上文](#unlitblockcompose-program-2--禁用预备态遮罩合成)）。
+`fill*comp` 思路一致（见[上文](#unlit-blockcompose-program-2-—-禁用-预备态遮罩合成)）。
 :::
 
 #### 分支二：预备态呼吸
@@ -1047,7 +1045,7 @@ uniform vec2 _TouchPos[10];
 `Unlit/ActiveBlock` 通过读取不同的 RT（普通 / 减块 / 禁用 / 预备 / 触摸 / 场景色）
 并在分支中合成，替代了「每状态一个着色器」的做法，这也是它体积最大的原因。
 `BlockRender` 有 7 个材质字段，对应 **7 种可见状态**（普通/减块 × 生效/禁用/预备 + 触摸）。
-逐段解析见 [`Unlit/ActiveBlock` 主着色器](#unlitactiveblock--主着色器汇总合成)。
+逐段解析见 [`Unlit/ActiveBlock` 主着色器](#unlit-activeblock-—-主着色器汇总合成)。
 :::
 
 ## 复现建议
@@ -1060,7 +1058,7 @@ uniform vec2 _TouchPos[10];
 - `hlslcc_mtx4x4` 前缀的矩阵 uniform 需改回 Unity 的 `unity_ObjectToWorld` 形式
 - 顶点阶段均为标准 `ObjectToWorld × Position → MatrixVP ×` 变换，**无块特有的顶点逻辑**。
   注意 `ObjectToWorld` 本身**确实携带** `localPosition` / `localScale`
-  （正是 [`behavior.md` 坐标转换](./behavior#12-块的摆放) 所设置的）
+  （正是 [`behavior.md` 坐标转换](./behavior#_1-2-块的摆放) 所设置的）
 
 ::: warning 版权
 提取出的着色器版权归 **南京鸽游网络有限公司**（Pigeon Games）所有。仅供技术研究参考，
@@ -1070,8 +1068,8 @@ uniform vec2 _TouchPos[10];
 
 | 版本 | 修正内容 |
 | --- | --- |
-| v19 | 新增[固定管线状态表](#固定管线状态blend--ztest--zwrite--cull--colormask)：从 Shader 资产 `m_ParsedForm.m_Passes[].m_State` 读出全部 9 个块 shader 的 **Blend/ZTest/ZWrite/Cull/ColorMask**；确认 `Unlit/ActiveBlock` = **`Blend One OneMinusSrcAlpha`（预乘 alpha）**，而非 `SrcAlpha OneMinusSrcAlpha` |
-| v18 | 新增 Mermaid 图：[渲染数据流](#rt-管线)（render.md）、[块生命周期状态图](./behavior#4-生命周期与阶段)（behavior.md） |
+| v19 | 新增[固定管线状态表](#固定管线状态-blend-ztest-zwrite-cull-colormask)：从 Shader 资产 `m_ParsedForm.m_Passes[].m_State` 读出全部 9 个块 shader 的 **Blend/ZTest/ZWrite/Cull/ColorMask**；确认 `Unlit/ActiveBlock` = **`Blend One OneMinusSrcAlpha`（预乘 alpha）**，而非 `SrcAlpha OneMinusSrcAlpha` |
+| v18 | 新增 Mermaid 图：[渲染数据流](#rt-管线)（render.md）、[块生命周期状态图](./behavior#_4-生命周期与阶段)（behavior.md） |
 | v17 | 订正 `*ReadyBlockRT`：**确有消费者**——`activeBlockMaterial`/`blockReadyMaterial` 把 `disabledNormalReadyBlockRT`/`disabledSubtractReadyBlockRT` 绑到 `_DisabledNormalBlockRT`/`_DisabledSubtractBlockRT`（纯预备遮罩）；`disabledNormalBlockRT`/`disabledSubtractBlockRT`（禁用+预备合并遮罩）供 `BlockCompose` prog2；`_ReadyComposeRT` = `composedDisabledBlockRT`（即 prog2 输出） |
 | v16 | 清空等价 C# 全部占位：泛型实参经 `ScriptMetadataMethod` 反查（`Instantiate<GameObject>`、`GetComponent<RectTransform/TouchBlockBehavior/PreviewBlockControl>`、`List<BlockArea>.get_Item`）；`RefreshSceneColorCommands` 第 2 段 = `Blit(None, CameraTarget, activeBlockMaterial)`（`BuiltinRenderTextureType`：None=0/CameraTarget=2）；`sinf`/`powf` 经 PLT→dynsym；`UpdateBlockAnimations` 的 anchor = `Vector2.one × 0.5` |
 | v15 | 闭合最后评审项「触摸按住的块被销毁」：块销毁只发生在 `max(disable,disappear)+destroyInterval`（post-active），无专门路径；`BlockRender.OnDestroy`(`0x1D1DB54`) 仅释放 `totalRT`/清相机 `targetTexture` |
@@ -1090,7 +1088,7 @@ uniform vec2 _TouchPos[10];
 | v8 | 解出 `SubtractBlockPostProcessor.OnRenderImage` 的 Blit 分支 |
 | v8 | 修正 `GetGlowRingWeight` 的两个 epsilon：实为 `.rodata` `0.001`/`1e-6`，**不是** `glowWeightFalloff`/`glowPassWeightThreshold` |
 | v8 | 修正 `UpdateDilateTexelSize` VA：`0x1D6EB9C` → **`0x1D1CC04`**；新增等价 C# [`code/BlockRender.decompiled.cs`](./code/BlockRender.decompiled.md) |
-| v7 | 新增 [`Unlit/ActiveBlock` 逐段解析](#unlitactiveblock--主着色器汇总合成)（入口水平 `discard`、`_ReadyComposeRT`、火花 HSV、触摸 SDF、`glowAdj` / `alpha`），并从「未解析」清单移出 |
+| v7 | 新增 [`Unlit/ActiveBlock` 逐段解析](#unlit-activeblock-—-主着色器汇总合成)（入口水平 `discard`、`_ReadyComposeRT`、火花 HSV、触摸 SDF、`glowAdj` / `alpha`），并从「未解析」清单移出 |
 | v7 | 修正 `BlockRender` 字段表被 `subtractBlockMaterial` 警告割裂的问题（表完整体、警告后置） |
 | v7 | 补 `_ST` 各向异性（`x ≠ y`）与贴图 Wrap（`FD_Noise` / `BlockNoise1` 实为 **Mirror**）——见 [`materials.md`](./materials.md) |
 | v6 | 解出 `FindCurrentEventIndex` 完整选取规则（返回 `[-1, Count-2]`，严格大于比较） |

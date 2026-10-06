@@ -2,6 +2,33 @@
 
 > 源文件：`block-params.json`
 
+## 格式说明
+
+从 `sharedassets12.assets` 序列化读出的块系统资产参数（相机投影、材质 uniform、层与 tag）。顶层键：
+
+| 键 | 类型 | 说明 |
+| --- | --- | --- |
+| `materials` | object | 材质字典，键为 `pathID` 字符串。 |
+| `cameras` | object | 相机字典，键为 `pathID` 字符串（`195`–`201`）。 |
+| `layers` | object | 层索引 → 层名。 |
+| `tags` | string[] | GameObject tag 列表。 |
+
+**`materials`**（8 个，`pathID` = `5 / 6 / 8 / 9 / 10 / 11 / 12 / 13`）每个材质含：
+
+| 字段 | 说明 |
+| --- | --- |
+| `pathID` | 材质自身的 pathID。 |
+| `shader_pathID` | 使用的 shader pathID（`32`–`40`，见 [着色器清单](./render.md#着色器清单)）。 |
+| `floats` | 浮点 uniform 名 → 值。 |
+| `colors` | 颜色 uniform 名 → `{ r, g, b, a }`。 |
+| `textures` | 纹理 uniform 名 → 贴图 pathID（`0` 表示运行时绑定的 RT）。 |
+
+**`cameras`**（7 台，`pathID` = `195`–`201`）每台含：`name` / `mask` / `mask_hex` / `sees` / `depth` / `orthographic` / `orthographicSize` / `targetTexturePathID`。
+
+> 参数含义与用途见 [渲染表现](./render.md) 与 [材质细节](./materials.md)。
+
+## 原始数据
+
 ````json
 {
  "materials": {

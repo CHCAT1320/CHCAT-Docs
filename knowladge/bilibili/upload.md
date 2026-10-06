@@ -397,7 +397,7 @@
 | --- | --- | --- |
 | `cover` | str | 封面 dataURI.  |
 
-> 注：当 **** 时，cover 字段格式为: data:image/jpeg;base64,${图片 base64 信息}
+> 注：当 **** 时，cover 字段格式为: `data:image/jpeg;base64,${图片 base64 信息}`
 
 ### `probe` 获取线路
 
