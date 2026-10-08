@@ -192,6 +192,11 @@ title: BlockArea 数据规格
     - 该字段同时决定三件事：走哪组 layer（共 3 台相机）、是否参与
       `SubtractBlockPostProcessor` 的场景色扣除、以及触摸区外扩还是内缩。
 
+    - **注（`PreviewBlockControl.Start` VA `0x1D7060C` 反汇编）**：Start **只在 `isSubtract == true` 时**
+      才写入 `enabledLayer` / `disabledLayer` / `readyLayer` 三个 layer 名；
+      普通块不写（保持 `null`）。三个字符串常量取自静态槽 `0x4144aa0/0xa98/0xa90`（字面量未解出）。
+      见 [`code/PreviewBlockControl.decompiled.cs`](./code/PreviewBlockControl.decompiled.md)。
+
     - 减块**不吃音符判定**：音符命中由 `LevelControl` 独立处理。减块只是视觉上挖掉一块区域，
       且 `SpriteRenderer` 的 alpha 为 `0.1`（近乎不可见），因此「吃掉音符」是视觉表现而非判定逻辑。
 
@@ -204,6 +209,46 @@ title: BlockArea 数据规格
 ::: tip
 三类事件相互独立，可同时存在，各自按时间顺序插值，最终共同决定块的变换。
 移动与缩放事件的 `easeTypeX` / `easeTypeY` 可以不同。
+:::
+
+#### `BlockArea.Mirror()`（VA `0x1CA32A8`，已反汇编）
+
+初版称「`BlockArea.Mirror()` 的实现未文档化」。现已从字节解出，语义为**水平镜像**
+（与 `JudgeLine.Mirror` / `Chart.Mirror` 配套），逐字段如下（**只动 x**，y 一律不变）：
+
+| 字段 | 变换 | 说明 |
+| --- | --- | --- |
+| `topRightPercentage.x`（`0x10`） | `tr.x ← 1 − bl.x` | 与 bl **交叉**赋值（角点互换 + 取补） |
+| `bottomLeftPercentage.x`（`0x18`） | `bl.x ← 1 − tr.x` | 同上；两式共享**旧值** |
+| `topRightPercentage.y` / `bottomLeftPercentage.y` | 不变 | |
+| `rotateEvents[i].anchor.x`（`0x10`） | `x ← 1 − x` | 自身取补 |
+| `rotateEvents[i].rotation`（`0x20`） | `rotation ← −rotation` | 取负 |
+| `moveEvents[i].endPosition.x`（`0x10`） | `x ← 1 − x` | 自身取补 |
+| `scaleEvents[i].anchor.x`（`0x10`） | `x ← 1 − x` | 自身取补 |
+
+```csharp
+// 反汇编 0x1CA32A8 还原。注意角点是「交叉」：先各读旧值，再互相写回。
+float trx = topRightPercentage.x, blx = bottomLeftPercentage.x;
+topRightPercentage.x   = 1f - blx;   //  ← 用旧的 bl.x
+bottomLeftPercentage.x = 1f - trx;   //  ← 用旧的 tr.x
+// y 不变
+
+foreach (var e in rotateEvents) { e.anchor.x = 1f - e.anchor.x; e.rotation = -e.rotation; } // 列表 null 则跳过
+foreach (var e in moveEvents)   { e.endPosition.x = 1f - e.endPosition.x; }                // 列表 null 则跳过
+foreach (var e in scaleEvents)  { e.anchor.x = 1f - e.anchor.x; }                          // 列表 null 则跳过
+```
+
+::: danger 角点是「交叉取补」，不是「各自取补」——别写错
+反汇编 `0x1CA3384`~`0x1CA33A0` 读的是 `[0x18]` 与 `[0x10]` 两个值，然后
+`[0x10] = 1 − 旧[0x18]`、`[0x18] = 1 − 旧[0x10]`。即 `tr`/`bl` 的 **x 互换后再取补**，
+不是各自 `x → 1−x`。语义上正好把「左/右」角点对调（保持字段名的 `right`/`left` 含义），
+只翻水平轴、y 不动。事件里的 `anchor.x` / `endPosition.x` 才是**自身取补**。
+:::
+
+::: warning 其它细节
+- **只翻 x**：四个 `y`（角点 y、事件里的 y）都不动；没有 `1−y` 的运算。
+- `rotation` 取负，解决了此前标注为「待确认」的旋转符号问题。
+- 每个事件列表都先判空（`null` 时跳过该段），不抛异常。
 :::
 
 ### 旋转事件 `RotateEvent`
@@ -276,8 +321,16 @@ IL2CPP 声明为 `public Vector2 scale;`。`stepX` / `stepY` 是静态方法
 | `0x5C` | `float` | `disabledBlockReadyDuration` | **未参与判定**，见下 |
 | `0x60` | `bool` | `isDragging` | 拖拽模式已激活 |
 | `0x68`–`0x80` | `string` ×4 | `enabledLayer` / `disabledLayer` / `readyLayer` / `touchLayer` | layer 名 |
-| `0x88` | `BlockPhase` | `lastPhase` | — |
-| `0x8C` | `bool` | `wasVisible` | 防淡入重播 |
+| `0x88` | `BlockPhase` | `lastPhase` | **死字段：全代码从不读写** |
+| `0x8C` | `bool` | `isDisabled` | 层已切到 `disabledLayer` 的标记 |
+| `0x8D` | `bool` | `wasVisible` | 上帧可见（防淡入重播） |
+| `0x8E` | `bool` | `wasReady` | 上帧处于 Ready（防 reboot） |
+
+::: tip `BlockPhase` 枚举（dump.cs TypeDefIndex 4924）
+`HiddenBefore=0, Disabled=1, Ready=2, Active=3, HiddenAfter=4`。但 `lastPhase`（`0x88`）
+**从未被任何方法读写**——阶段是每帧按 `nowTime` 重算布尔（`wasVisible`/`wasReady`/`isDisabled`）得出的，
+不缓存枚举。见 [`behavior.md §4`](./behavior#_4-生命周期与阶段)。
+:::
 
 ::: tip 四个 layer 是按**名字**切换的
 都是字符串，运行时通过 `gameObject.layer = LayerMask.NameToLayer(name)` 切换。
@@ -307,12 +360,17 @@ bool ready = (enableTime - disabledBlockReadyDuration) <= now && now < enableTim
 | `disabledBlockShowDuration` | `0.5` | **仅等于 `Ready` 阶段的长度**（见下） |
 | `disabledBlockReadyDuration` | `0.5` | 未参与判定，见上 |
 | `destroyInterval` | `5.0` | 消失后的销毁延迟 |
-| `blockTouchInsetScreenHeightRatio` | `0.03` | 触摸区外扩基准（占屏高 `H` 比例） |
-| `maxBlockTouchInsetLocal` | `0.25` | 触摸区外扩上限（局部单位） |
 | `edgeSize` | `1` | 边缘膨胀轮数（**不是像素半径**，见 [`render.md`](./render#rt-管线)） |
 | `glowRadius` | `6` | 发光膨胀名义轮数（实际 5 轮） |
 | `glowWeightFalloff` | `2.65` | 发光权重衰减指数 |
 | `glowPassWeightThreshold` | `0.01` | 低于此权重的轮次跳过 |
+
+::: danger 初版列出的 `blockTouchInsetScreenHeightRatio` / `maxBlockTouchInsetLocal` 在 APK 里不存在
+初版在「调参」表里列了 `blockTouchInsetScreenHeightRatio = 0.03`、`maxBlockTouchInsetLocal = 0.25`，
+声称是触摸区 inset 基准。**这两个字段在 `dump.cs` 元数据与反汇编里都找不到**，也没有任何方法读取它们。
+APK 的命中测试是**裸半边 `0.5`**（见 [`behavior.md §5.1`](./behavior#_5-1-命中测试-va-0x1d22560-已逐指复核)）。
+本表已删除这两行。
+:::
 
 ::: danger `disabledBlockShowDuration` 只管 `Ready` 一段
 初版两处称它是「上线前**完整**预警窗口（`Disabled` + `Ready` 合计）」，

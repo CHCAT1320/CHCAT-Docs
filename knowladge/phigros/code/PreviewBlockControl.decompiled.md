@@ -51,7 +51,8 @@ namespace ProjectEditor.PreviewScripts
         private bool wasVisible;                                // 0x8D
         private bool wasReady;                                  // 0x8E
 
-        public enum BlockPhase { None = 0, Ready = 1, Active = 2, Disabled = 3 }
+        // dump.cs TypeDefIndex 4924：HiddenBefore=0, Disabled=1, Ready=2, Active=3, HiddenAfter=4
+        public enum BlockPhase { HiddenBefore = 0, Disabled = 1, Ready = 2, Active = 3, HiddenAfter = 4 }
 
         private readonly struct Geometry
         {
@@ -60,6 +61,25 @@ namespace ProjectEditor.PreviewScripts
             public readonly Vector2 anchorWorld;  // Item3
             public Geometry(Vector2 s, Vector2 c, Vector2 a) { size = s; center = c; anchorWorld = a; }
         }
+
+        // ---- VA 0x1D7060C ---------------------------------------------------
+        // 仅当 blockInfo.isSubtract 为真时，才把三个 layer 名字段设成静态字符串常量。
+        // 普通块（isSubtract=false）**不设置** enabledLayer/disabledLayer/readyLayer
+        // （保持 null → NameToLayer(null) 行为由后续协程承担）。反汇编实测。
+        private void Start()
+        {
+            if (blockInfo == null) throw new NullReferenceException();
+            if (blockInfo.isSubtract)                 // 0x30
+            {
+                enabledLayer  = KEnabledLayerName;    // 0x68 ← .rodata/元数据字符串常量
+                disabledLayer = KDisabledLayerName;   // 0x70
+                readyLayer    = KReadyLayerName;      // 0x78
+            }
+        }
+        // 三个 layer 名常量取自静态字符串槽 0x4144aa0 / 0xa98 / 0xa90（名字字面量未在本环境解出）。
+        private const string KEnabledLayerName  = null;
+        private const string KDisabledLayerName = null;
+        private const string KReadyLayerName    = null;
 
         // ---- VA 0x1D7069C ---------------------------------------------------
         private void Update()
@@ -313,6 +333,25 @@ namespace ProjectEditor.PreviewScripts
             return blockInfo.enableTime <= t && blockInfo.disableTime > t;
         }
 
+        // ---- VA 0x1D71B40（编辑器回写：transform → blockInfo 百分比 + 写回列表）----
+        // 读 localPosition / localScale（世界→百分比反算），改写 topRightPercentage /
+        // bottomLeftPercentage，再把 blockInfo 写回 levelControl 列表的第 index 项。
+        private void UpdateBlockInfo()
+        {
+            if (blockInfo == null) throw new NullReferenceException();
+            Vector3 lp = transform.localPosition;
+            Vector3 ls = transform.localScale;
+            float hx = ls.x * 0.5f, hy = ls.y * 0.5f;         // half scale
+            // 中心 + 半尺寸 → 右上百分比；中心 − 半尺寸 → 左下百分比
+            float cx = lp.x / screenWidth, cy = lp.y / screenHeight;   // 0x40/0x44
+            float ex = hx / screenWidth,   ey = hy / screenHeight;
+            blockInfo.bottomLeftPercentage = new Vector2((cx - ex) + 0.5f, (cy - ey) + 0.5f);  // 0x18
+            blockInfo.topRightPercentage   = new Vector2((cx + ex) + 0.5f, (cy + ey) + 0.5f);  // 0x10
+            // 写回：levelControl(0x30) → +0x140 = chart(Chart) → +0x20 = chart.blockAreaList，
+            // 尾调用 `List<BlockArea>.set_Item(index, blockInfo)`（VA 0x2E0F2F8），index = 本对象 0x48。
+            levelControl.chart.blockAreaList[index] = blockInfo;
+        }
+
         // ---- VA 0x1D70B10（<Update>g__DestroyAfterInterval|16_0）------------
         private void EnsureTouchHover()
         {
@@ -323,8 +362,22 @@ namespace ProjectEditor.PreviewScripts
         }
 
         // ---- VA 0x1F9A2DC（FindCurrentEventIndex<object>）-------------------
-        // 返回严格大于 now 的首个事件索引减一，范围 [-1, Count-2]；见 behavior.md。
-        private int FindCurrentEventIndex<T>(List<T> events, Func<T, float> getTime) { /* 见 behavior.md §3.3 */ return -1; }
+        // 从头线性扫描（无二分）：返回「最后一个 time ≤ now 的事件」的下标，
+        // 范围 [-1, Count-2]。Count==0 或 now < events[0].time 时返回 -1。
+        // 用严格比较 `t > now` 判停 ⇒ 等时刻取最靠后的那个（见 behavior.md §3.3）。
+        private int FindCurrentEventIndex<T>(List<T> events, Func<T, float> getTime)
+        {
+            if (events == null) throw new NullReferenceException();
+            if (progressControl == null) throw new NullReferenceException();
+            float now = progressControl.nowTime;                 // 0x28 → +0x88
+            int result = -1;
+            for (int i = 1; i < events.Count; i++)
+            {
+                if (getTime(events[i]) > now) return result;     // fcmp/b.hi：首个严格大于 now 即返回 i-1
+                result = i;
+            }
+            return result;                                        // 全 ≤ now ⇒ Count-2（或 -1 若 Count<2）
+        }
 
         // ---- VA 0x1D70D78（<UpdateBlockAnimations>g__UpdateScale|24_0）--------
         // 返回 (size = scaleFactor * originalSize, center)。

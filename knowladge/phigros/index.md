@@ -14,15 +14,17 @@
 | --- | --- | --- |
 | [`data.md`](./data.md) | 数据规格 | **公共符号约定**（τ / p / P / H / S）、`Chart` / `BlockArea` / 三类事件字段、驱动者 `PreviewBlockControl` 字段表、全部调参值 |
 | [`behavior.md`](./behavior.md) | 运行时行为 | 每帧执行顺序、坐标转换、缓动表与查表、变换、阶段判定、命中判定与触摸、音频 |
-| [`render.md`](./render.md) | 渲染表现 | 图层与相机、RT 管线、材质参数、遮罩布局、**真实 GLSL 源码**与关键算法、发光权重 |
+| [`states.md`](./states.md) | 状态与行为 | **`BlockPhase` 五态（+Residual 过渡）**、各状态的时间条件、位置/可见、layer、颜色、判定、销毁与一次性协程 |
+| [`render.md`](./render.md) | 渲染表现 | 图层与相机、**屏幕/分辨率影响因素**、RT 管线、材质参数、遮罩布局、**真实 GLSL 源码**与关键算法、发光权重 |
 | [`materials.md`](./materials.md) | 材质细节 | 各材质的 **`_ST`（tiling）**、贴图**导入设置**（Wrap/Filter/sRGB）、两套独立位移系统 |
-| [`shaders/`](./shaders/) | 着色器源码 | 9 个 GLSL ES 3.00 文件 / 13 个 program（其中 4 个含二进制哨兵，不能直接编译） |
 | [`tex/`](./tex/) | 贴图资源 | 4 张块系统贴图（`Block` / `BlockNoise1` / `PointNoise` / `FD_Noise`，从 `sharedassets12.assets` 导出） |
 | [`blockAreaList.json`](./blockAreaList.md) | 块数据样本 | c9s 剧情谱的 `blockAreaList`（48 块 / 4 减块）——**本仓库唯一可从 APK 字节溯源**的块语料 |
-| [`block-params.json`](./block-params.md) | 材质参数 | 8 个材质保存的 `_ST` / 颜色 / 位移参数（`BlockRender` 持 7 个 + 3 个后处理） |
 | [`code/PreviewBlockControl.decompiled.cs`](./code/PreviewBlockControl.decompiled.md) | 等价 C# | `PreviewBlockControl`（生命周期/阶段/几何/插值/变换/命中/协程）与 `TouchBlockBehavior` 的反汇编还原 C# |
 | [`code/`](./code/) | IL2CPP 类声明 | Il2CppDumper 导出的相关 C# 类（`BlockRender` / `PreviewBlockControl` / `GameInformation.BlockArea` / `JudgeControl` / `TouchBlockBehavior` 等），字段偏移与 VA 注释即各文档字段表的来源 |
-| [`code/BlockRender.decompiled.cs`](./code/BlockRender.decompiled.md) | 等价 C# | 由 ARM64 反汇编还原的渲染核心等价 C#（`Start` / `CopyReadyTouchParamsToActive` / `RenderEffects` / `LateUpdate` / `GetGlowRingWeight` / 低通 / `SubtractBlockPostProcessor`），未确定处均显式标注 |
+| [`code/BlockRender.decompiled.cs`](./code/BlockRender.decompiled.md) | 等价 C# | 由 ARM64 反汇编还原的渲染核心等价 C#（`Start` / `Update` / `OnDestroy` / `CopyReadyTouchParamsToActive` / `RenderEffects` / `LateUpdate` / `GetGlowRingWeight` / 低通 / `SubtractBlockPostProcessor`），未确定处均显式标注 |
+| [`code/PreviewElementUpdateControl.decompiled.cs`](./code/PreviewElementUpdateControl.decompiled.md) | 等价 C# | `PreviewElementUpdateControl`（`Awake` 视口 / `CreateBlockRender` / `DestroyAndCreateAllBlocks` / `ClearAllBlocks` / `GetBlock`）的反汇编还原 |
+| [`code/GameInformation_BlockArea.decompiled.cs`](./code/GameInformation_BlockArea.decompiled.md) | 等价 C# | `GameInformation.BlockArea.Mirror()`（VA `0x1CA32A8`，水平镜像语义）的反汇编还原 |
+| [`code/JudgeControl.decompiled.cs`](./code/JudgeControl.decompiled.md) | 等价 C# | `JudgeControl` 块命中部分（`IsPositionInsideBlock` VA `0x1D22560` / `TryGetBlockingBlock` VA `0x1D22010`） |
 
 ::: tip 符号只定义一次
 `τ` / `p` / `P` / `H` / `S` 的定义在 [`data.md` 符号约定](./data#符号约定)。
@@ -100,9 +102,10 @@ Unity 编译后的 GLSL ES 3.00。
    验证：对 `Petrichor.voidMournfinale` 逐帧打印阶段，应与音轨上块的起止吻合。
 3. **几何** — 实现 [`behavior.md` 坐标转换与变换](./behavior#_1-坐标转换)。
    验证：`transform.localPosition` / `localScale` 与预期矩形一致；隐藏态应落在 `x = 1000`。
-4. **缓动** — 按 [`behavior.md` 缓动](./behavior#_2-时间与缓动) 生成 15×101 表。
-   **注意四种死表**（`3/6/9/13` 恒 0，`14` 恒 1）、`12` 的两处断点，
-   以及 `12` 的 `47`~`49` 三点因构建期越界读**无法复现**。
+4. **缓动** — 按 [`behavior.md` 缓动](./behavior#_2-时间与缓动) 生成 15×101 表（**APK 事实**）。
+   **唯一死表是 `13`（恒 0）**，`14` 恒 1；`3 / 6 / 9 / 12` 是**复合表**
+   （降采样 + 压半，含 `50…57` 断点），其 `47`~`49` 三点因构建期越界读**无法复现**。
+   ⚠️ **但本仓库预览/复现按社区对称 in-out 实现 `3/6/9/12`**（见 §2.1.1 取舍），不构建该复合表。
    验证：`easeType 0` 与 `14` 在 `ハテ.rNFrums.AT` 中的表现应与原版一致。
 5. **触摸** — 实现 [`behavior.md` 命中判定与触摸](./behavior#_5-命中判定与触摸)，**注意普通块外扩、减块内缩**。
    验证：`Petrichor.voidMournfinale.IN` 的 427 个块逐个验证命中区。
@@ -193,7 +196,7 @@ Unity 编译后的 GLSL ES 3.00。
 | `wasVisible` / `idlePosition` 语义 | 已澄清，见 [`behavior.md` 命中判定与触摸](./behavior#_5-命中判定与触摸) |
 | 提取了多少 shader | 124 个程序；因重名落盘为 123 个文件 |
 | 事件索引选取规则 | 已解：`FindCurrentEventIndex` 返回 `[-1, Count-2]`，**严格大于**比较（相等时继续前移），见 [`behavior.md` 事件插值](./behavior#_2-3-事件插值) |
-| 位移/缩放/旋转如何套到几何 | 已解：`UpdateMovement` 是**相对原始中心的增量**（`+=` 而非替换）；缩放/旋转**绕事件锚点**；详见 [`behavior.md` 变换](./behavior#_3-变换) |
+| 位移/缩放/旋转如何套到几何 | 已解：`UpdateMovement(originalCenter=geo.center, currentCenter=旋转后中心)`，返回 `旋转后中心 + (插值目标 − 原始几何中心)`（`+=` 增量语义）；缩放/旋转经栈上 `AnimState` 绕事件锚点就地累积；详见 [`behavior.md` 变换](./behavior#_3-变换) |
 | `SafeDiv` 调用点 | 已解：`UpdateScale` 中 `SafeDiv(next.scale, cur.scale)` 求相邻事件的缩放比 |
 | `UpdateScale` / `UpdateRotation` | 已解：逐事件把 `center` 绕锚点按比率缩放/旋转，`size = 插值scale × originalSize`、`rotation = 插值rotation`，见 [`code/PreviewBlockControl.decompiled.cs`](./code/PreviewBlockControl.decompiled.md) |
 | `RotateAroundAnchor` 守卫常量 | 已解：`s3` = **`Mathf.Epsilon`**(`1.401298E-45`)，阈值 `max(|Δ|·1e-6, 8·Epsilon)`，early-return **永不触发**（初版「第二项极大」的说法方向相反） |
@@ -201,10 +204,14 @@ Unity 编译后的 GLSL ES 3.00。
 | `renderer.color` 的 RGB | 已解：全代码仅两处写 `renderer.color`——`UpdateBlockActivation` 只改 `.a`（减块 `0.1`），`DisabledBlockShow` 用 `(1,1,1,*)`；故 **RGB 恒为 `(1,1,1)`** |
 | 块相机投影 | 已解：7 台全 **正交**、`orthographicSize = 5.0`（`sharedassets12` pathID 195–201）、`localScale=1`；`PreviewElementUpdateControl.Awake` 定 `screenHeight=2·orthoSize`、`screenWidth=·aspect` ⇒ `screenWidth/Height` 是**世界单位**（≈17.78×10）**非像素**；初版「5.0 必被覆盖 / 1 单位=1 像素」均错误 |
 | `formatVersion` / `offset` 与块时间轴 | 已解：`DestroyAndCreateAllBlocks` 把 `chart.blockAreaList[i]` **直接**赋给 `blockInfo`（不加 offset、不看 formatVersion）；块时间与 `progressControl.nowTime` 比较，而 `nowTime = audioTime − levelInformation.offset`（`ProgressControl` `0x90`）。故只有**关卡级 offset** 经时钟整体平移，`formatVersion` 与块无关 |
-| 触摸按住的块被销毁时的路径 | 已解：**无专门路径**。`DestroyAfterInterval`(`0x1D70B10`) 仅在 `now > max(disableTime, disappearTime) + destroyInterval(5.0)` 时 `Object.Destroy(gameObject)`；届时块早已 `IsActive=false`、不会被 `TryGetBlockingBlock` 命中。触摸悬停槽由 `fingerId` 驱动、经 `EndTouchBlockFrame` 释放，与块生命周期无关；`BlockRender.OnDestroy`(`0x1D1DB54`) 只释放 `totalRT`/清相机 `targetTexture`，不碰触摸槽位 |
+| 触摸按住的块被销毁时的路径 | 已解：**无专门路径**。`DestroyAfterInterval`(`0x1D70B10`) 仅在 `now > max(disableTime, disappearTime) + destroyInterval(5.0)` 时 `Object.Destroy(gameObject)`；届时块早已 `IsActive=false`、不会被 `TryGetBlockingBlock` 命中。触摸悬停槽由 `fingerId` 驱动、经 `EndTouchBlockFrame` 释放，与块生命周期无关；`BlockRender.OnDestroy`(`0x1D1DB54`) 移除 `CameraEvent.BeforeImageEffects` 命令缓冲、`cmd.Release()`、清 **4 台**相机 `targetTexture`（`0x20/0x28/0x30/0x50`；`0x38/0x40/0x48` 未清，照抄）、`Release` 并 `Clear` `totalRT`，不碰触摸槽位 |
+| `BlockRender.Update` / `PreviewBlockControl.Start` | 已解：`Update`(`0x1D1CEBC`) 仅尾调用 `UpdateTouchPos()`；`Start`(`0x1D7060C`) **只在 `isSubtract==true` 时**设置 `enabledLayer`/`disabledLayer`/`readyLayer` 三个 layer 名（静态字符串常量，字面量未解出） |
+| `GameInformation.BlockArea.Mirror()` | 已解（VA `0x1CA32A8`，**只翻 x**）：角点 x **交叉取补**（`tr.x←1−bl.x`、`bl.x←1−tr.x`，y 不变）；`rotateEvents` 的 `anchor.x` 自身取补且 `rotation→−rotation`；`moveEvents.endPosition.x`/`scaleEvents.anchor.x` 自身取补。闭合此前「未文档化」缺口，见 [`data.md`](./data#blockarea-mirror-va-0x1ca32a8-已反汇编) |
+| `PreviewBlockControl.UpdateBlockInfo()` | 已解（VA `0x1D71B40`，编辑器回写）：由 `transform.localPosition/localScale` 反算 `topRightPercentage`/`bottomLeftPercentage`，再 `List.set_Item(index, blockInfo)` 写回 `levelControl(+0x140 → chart)(+0x20 → blockAreaList)` |
+| 块的触摸命中测试 | 已解（`JudgeControl`，`code/JudgeControl.decompiled.cs`）：`IsPositionInsideBlock`(`0x1D22560`) 是**裸半边 `0.5`** 的局部 AABB（**无 inset**，`lossyScale ≤1e-4` 失败）；`TryGetBlockingBlock`(`0x1D22010`) 按**减块命中数奇偶**抵消普通块。**订正**此前文档的「普通外扩 / 减块内缩 inset」——APK 里不存在 |
 | `DisabledBlockReady` / `DisabledBlockShow` 协程 | 已解：Ready 先切 `readyLayer` → `WaitForSeconds(disabledBlockReadyDuration)` → 切 `enabledLayer`；Show 按 `disabledBlockShowDuration` 线性淡入颜色（普通 `(1,1,1,0)→(1,1,1,1)`，减块 `(1,0,1,0.1)→(1,1,1,0.1)`） |
 | `TouchBlockBehavior.Animation` | 已解：`Vector3.Lerp(start,end,Clamp01(t/animationDuration))`；缩放起/终点 = **`Vector3.zero`**（静态单例 `0x413DAF0` → 元数据槽 `Vector3_TypeInfo` 首字段）；Hide 收尾时把 `position` 归到 `idlePosition` |
-| 缓动表是否与游戏一致 | 已由 `GetEase.Instantiation`（VA `0x1CAE478`）反汇编复核：`E[idx]=u^n`、`E[idx+1]=1-(1-u)^n`，`idx∈{1,4,7,10}`、`n=idx/3+2`；`3/6/9=0`、`12=分段`、`13=0`、`14=1` |
+| 缓动表是否与游戏一致 | 已由 `GetEase.Instantiation`（VA `0x1CAE478`）反汇编复核：`E[t]=u^n`、`E[t+1]=1-(1-u)^n`；`t∈{1,4,7,10}`、`n=t/3+2`（2/3/4/5）；`t+2`（即 `3/6/9/12`）= **复合（降采样+压半）**、`13=0`、`14=1`。初版误把 `3/6/9` 当死表。⚠️ **实现按社区对称 in-out（见 §2.1.1 取舍）** |
 | `Unlit/ActiveBlock` 完整解析 | 已逐段读出，见 [`render.md` ActiveBlock](./render#unlit-activeblock-—-主着色器汇总合成)：入口水平 `discard`、`_ReadyComposeRT` 预备亮度、火花 HSV 色相偏移、触摸 SDF 层、`glowAdj` / `alpha` 公式 |
 | 材质 `_ST` / 贴图导入设置 | 已读出，见 [`materials.md`](./materials.md)。**全部 Point 过滤**；`_ST` 各向异性（`x ≠ y`）；active `_DisplaceMap` (0.8,0.3)、`_SparkMap` (3.0,1.2)、`_NoiseMap` (1.5,1.46)，compose `_DisplaceMap` (2.13,1.02)；`FD_Noise`/`BlockNoise1` 为 **Mirror**，仅 `PointNoise` 为 `Repeat` |
 
@@ -212,7 +219,7 @@ Unity 编译后的 GLSL ES 3.00。
 
 - **行为逻辑**：阶段 1–6 已还原并可复现。
 - **画面**：着色器源码已获取，遮罩与合成结构完整。
-- **仍缺**：无（评审清单已闭合）；客观差距见上文「数据来源」。
+- **仍缺**：`Start` 三个 layer 名的**字符串字面量内容**（`.so` 无 RELA/Android-reloc 未解，字段名已知）；其余评审清单已闭合。
 
 ---
 

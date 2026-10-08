@@ -245,6 +245,35 @@ public partial class BlockRender : MonoBehaviour
         dst.SetTextureOffset(dstId, src.GetTextureOffset(srcId));
     }
 
+    // ---- VA 0x1D1CEBC -------------------------------------------------------
+    // 仅是一条尾调用：Update() => UpdateTouchPos()（反汇编首指令即 b 0x1D1CEC0）。
+    private void Update() => UpdateTouchPos();
+
+    // ---- VA 0x1D1DB54 -------------------------------------------------------
+    // 释放：移除命令缓冲 → 清部分相机的 targetTexture → Release + Clear(totalRT)。
+    // 反汇编里**只**清这 4 台：0x20 normal / 0x28 subtract / 0x30 disabledNormal / 0x50 touch；
+    // 0x38 disabledSubtract、0x40/0x48 两台 *Ready* **未在此撤销**（不对称，照抄）。
+    private void OnDestroy()
+    {
+        if (mainCamera != null && cmd != null)
+            mainCamera.RemoveCommandBuffer(CameraEvent.BeforeImageEffects, cmd);  // 0x12 = 18
+        if (cmd != null) cmd.Release();
+        cmd = null;
+
+        if (normalBlockCamera != null)         normalBlockCamera.targetTexture = null;          // 0x20
+        if (subtractBlockCamera != null)       subtractBlockCamera.targetTexture = null;        // 0x28
+        if (disabledNormalBlockCamera != null) disabledNormalBlockCamera.targetTexture = null;  // 0x30
+        if (touchBlockCamera != null)          touchBlockCamera.targetTexture = null;           // 0x50
+        // 0x38 / 0x40 / 0x48 未清（照抄 APK 行为）。
+
+        if (totalRT != null)
+        {
+            foreach (var rt in totalRT)
+                if (rt != null) rt.Release();
+            totalRT.Clear();
+        }
+    }
+
     // ---- VA 0x1D1CC04 -------------------------------------------------------
     private void UpdateDilateTexelSize()
     {

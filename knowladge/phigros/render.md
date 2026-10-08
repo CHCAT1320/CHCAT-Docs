@@ -133,6 +133,95 @@ UnityPy **1.10.18** 的 `Camera` typetree 解析不出 `m_CullingMask`，
 的**合并遮罩**，而不是只有禁用态。这也是早期「预备态 RT 无人读取」这一困惑的答案。
 :::
 
+## 屏幕 / 分辨率影响因素
+
+块系统对「屏幕」的依赖分散在 **C#（`BlockRender` / `PreviewBlockControl` / `PreviewElementUpdateControl`）
+与 GLSL（`_ScreenParams` / `_ProjectionParams` / `*TexelSize`）** 两侧。下面把它们集中列出，
+便于复现时对齐分辨率行为。
+
+### A. `Screen.width / height` → RT 尺寸（C#）
+
+`BlockRender.Start`（VA `0x1D1BC4C`）读 `Screen.width/height`（**像素**）后整除建 RT：
+
+| RT | 尺寸 | 依据 |
+| --- | --- | --- |
+| `sceneColorRT`(`0xB8`) | `Screen / 6` | 反汇编 `w/6` |
+| 块遮罩 ×7（`normal/subtract/disabled*`） | `Screen / 8` | 反汇编 `w/8` |
+| `touchBlockRT`(`0x100`) | `Screen / 8` | 同上 |
+| `effectRT` / `pingA` / `pingB` | `Screen / 4` | 反汇编 `w/4`（`mw<<1`） |
+
+⇒ **改屏幕分辨率会等比改所有块 RT**；`_ScreenParams` 在着色器里拿到的正是这些 RT 的像素尺寸
+（因为它们按固定比例由 `Screen` 建成）。
+
+### B. `Camera.aspect` + `orthographicSize` → 世界视口（C#）
+
+`PreviewElementUpdateControl.Awake`（VA `0x1D79FE8`）：
+
+```csharp
+screenHeight = 2f * previewCam.orthographicSize;   // = 10（orthoSize 恒 5.0）
+screenWidth  = screenHeight * previewCam.aspect;   // = 10 * aspect
+```
+
+- 这对值写进块的 `screenWidth(0x40)`/`screenHeight(0x44)`，供 `AnchorToWorld` / `GetBlockGeometry`
+  / `UpdateBlockInfo` 使用（**世界单位，非像素**）。
+- **屏幕宽高比**因此直接影响块的世界摆放：`AnchorToWorld(p) = (p−0.5)·(screenW, screenH)`。
+- `fxRenderList` 的画布同样按此尺寸：`sizeDelta = (2·orthoSize·aspect, 2·orthoSize)`。
+
+### C. `_ScreenParams`（GLSL 内置，= 当前 RT 的像素尺寸）
+
+`uniform vec4 _ScreenParams;` = `(width, height, 1+1/width, 1+1/height)`，**由 Unity 自动注入**，
+取的是**这一遍 pass 正在渲染的 RT** 的像素尺寸（不是物理屏幕）。只出现在：
+
+- `Unlit/ActiveBlock`（`Unlit_ActiveBlock.glsl`）
+- `Unlit/TouchEffect`（`Unlit_TouchEffect.glsl`）
+
+用途：
+
+1. **中央竖带 `discard`**（`ActiveBlock` 顶点阶段）：
+   ```glsl
+   vs_TEXCOORD6 = (_ScreenParams.y * 0.8888889) / _ScreenParams.x;   // (8/9)·(H/W) = (8/9)/aspect
+   ```
+   片元里 `if (-|uv.x−0.5| + vs_TEXCOORD6 < 0) discard;` ⇒ 只保留 `|u−0.5| ≤ (8/9)(H/W)` 的中央竖带。
+   由于 `|u−0.5|` 最大为 `0.5`，只有当 `(8/9)/aspect < 0.5` 即 **`aspect > 16/9`（超宽屏）**时才切掉左右两侧；
+   `16:9` 及更窄的屏幕不触发。
+2. **像素栅格对齐**：把归一化 UV 乘 `_ScreenParams.xy` 变像素坐标 → 除以
+   `max(_BackgroundPixelScale,1)`（或 `_TouchBackgroundPixelScale` / `_SDFCellSize`）→ `floor` → 除回，
+   用于噪声/位移/SDF 的稳定像素化采样。
+
+### D. `_ProjectionParams.x`（GLSL 内置）
+
+`ActiveBlock` / `TouchEffect` 的顶点阶段用它翻转裁剪空间的 y：
+
+```glsl
+u_xlat1.x = u_xlat0.y * _ProjectionParams.x;   // 渲染进 RT 时 = -1（翻转）
+```
+
+用于 `vs_TEXCOORD3`（屏幕 UV）的正确朝向；**与渲染目标是否为 RT 有关**。
+
+### E. `*TexelSize`（每 RT 的纹素尺寸）
+
+- `_EffectRT_TexelSize`（`ActiveBlock`，`0x18`）：`= (1/w, 1/h, w, h)`，`.xy`=纹素、`.zw`=尺寸。
+  用于位移/噪声的纹素级偏移（`ActiveBlock.glsl:213-216`）。
+- `_DilateTexelSize`（`EdgeMask`/`GlowMask`）：由 `BlockRender.UpdateDilateTexelSize()`
+  （VA `0x1D1CC04`）按 `effectRT` 的尺寸设 `(1/w, 1/h, w, h)`，**不是** `_ScreenParams` 直接给的。
+  收缩/膨胀半径靠**迭代轮数**而非单次 UV 偏移。
+
+### F. 与屏幕无关的着色器
+
+`BlockSprite` / `DisabledBlock` / `ReadyBlock` / `BlockCompose` / `SubtractBlockBlender`
+**完全不含** `_ScreenParams` / `_ProjectionParams` / `*TexelSize`——它们只吃各自的 `_MainTex`/遮罩 RT 与常量，
+对分辨率不敏感。
+
+### 小结
+
+| 因素 | 来源 | 影响 |
+| --- | --- | --- |
+| 像素分辨率 | `Screen.width/height` | 全部块 RT 尺寸（/6、/8、/4） |
+| 宽高比 | `Camera.aspect` × `orthoSize` | 块的世界视口 `screenWidth/Height`、`AnchorToWorld` 结果 |
+| RT 像素尺寸 | `_ScreenParams`（内置） | `(8/9)(H/W)` 竖带裁切、像素栅格对齐 |
+| RT 朝向 | `_ProjectionParams.x`（内置） | 屏幕 UV 的 y 翻转 |
+| 每 RT 纹素 | `*TexelSize` | 位移/膨胀的纹素级偏移 |
+
 ## RT 管线
 
 ```
@@ -1068,6 +1157,12 @@ uniform vec2 _TouchPos[10];
 
 | 版本 | 修正内容 |
 | --- | --- |
+| v25 | 新增[屏幕 / 分辨率影响因素](#屏幕-分辨率影响因素)：汇总全部屏幕依赖——`Screen.width/height`→RT 尺寸、`Camera.aspect`×`orthoSize`→世界视口、`_ScreenParams`（内置，RT 像素尺寸）→`(8/9)(H/W)` 竖带与像素栅格、`_ProjectionParams.x`→y 翻转、`*TexelSize`；并列出 5 个与屏幕无关的 shader |
+| v24 | 订正 `behavior.md §5` 命中测试：APK 的 `IsPositionInsideBlock`(`0x1D22560`) 用**裸半边 `0.5`**、**无 inset**，`TryGetBlockingBlock`(`0x1D22010`) 按**减块奇偶**抵消；初版所述 `TryGetBlockTouchHalfSize`/`GetBlockTouchCorner`/`IsPositionInsideOriginalBlock` 在 `dump.cs` 中**不存在**。新增 `code/JudgeControl.decompiled.cs`；`FindCurrentEventIndex` 由占位改为按 `0x1F9A2DC` 实现 |
+| v23 | 补齐缺失的等价 C#：`BlockRender.Update`(`0x1D1CEBC`，仅尾调用 `UpdateTouchPos`)、`BlockRender.OnDestroy`(`0x1D1DB54`，移除 `BeforeImageEffects` 命令缓冲、清 4 台相机 targetTexture、`Release`+`Clear(totalRT)`；**0x38/0x40/0x48 相机未清，照抄**)、`PreviewBlockControl.Start`(`0x1D7060C`)/`UpdateBlockInfo`(`0x1D71B40`)、`GameInformation.BlockArea.Mirror`(`0x1CA32A8`)、`PreviewElementUpdateControl`(`Awake`/`CreateBlockRender`/`DestroyAndCreateAllBlocks`/`ClearAllBlocks`/`GetBlock`) |
+| v22 | 解出 `GameInformation.BlockArea.Mirror()`（VA `0x1CA32A8`，**只翻 x**）：角点 x **交叉取补**（`tr.x←1−bl.x`、`bl.x←1−tr.x`，y 不变）；`rotateEvents` 的 `anchor.x` 自身取补且 `rotation→−rotation`；`moveEvents.endPosition.x`/`scaleEvents.anchor.x` 自身取补。闭合此前的 R3「未文档化」缺口 |
+| v21 | 订正 `behavior.md` 的 `UpdateBlockAnimations` 伪代码：`GetBlockGeometry` 返回 `(size,center,anchorWorld)`（非 `out`）；`UpdateScale`/`UpdateRotation` 经栈上 `AnimState`(`<>c__DisplayClass24_0`) 就地读写；`UpdateMovement(geo.center, 旋转后中心)`（非 `(geo,scale,angle)`）。删除 §4「`UpdateScale`/`UpdateRotation` 未重构」的过期表述 |
+| v20 | 订正缓动表：降采样复合在**主循环内**对 `t+2` 执行，故 **`3 / 6 / 9 / 12` 均为复合表**（初版误把 `3/6/9` 当死表）；只有 `13=0`、`14=1`。采样点表 `3/6/9` 行已改正（如 `3 = 0.0032 / 0.1682 / 0 / 0.8318 / 1`）。见 [`behavior.md` 缓动](./behavior#_2-时间与缓动) |
 | v19 | 新增[固定管线状态表](#固定管线状态-blend-ztest-zwrite-cull-colormask)：从 Shader 资产 `m_ParsedForm.m_Passes[].m_State` 读出全部 9 个块 shader 的 **Blend/ZTest/ZWrite/Cull/ColorMask**；确认 `Unlit/ActiveBlock` = **`Blend One OneMinusSrcAlpha`（预乘 alpha）**，而非 `SrcAlpha OneMinusSrcAlpha` |
 | v18 | 新增 Mermaid 图：[渲染数据流](#rt-管线)（render.md）、[块生命周期状态图](./behavior#_4-生命周期与阶段)（behavior.md） |
 | v17 | 订正 `*ReadyBlockRT`：**确有消费者**——`activeBlockMaterial`/`blockReadyMaterial` 把 `disabledNormalReadyBlockRT`/`disabledSubtractReadyBlockRT` 绑到 `_DisabledNormalBlockRT`/`_DisabledSubtractBlockRT`（纯预备遮罩）；`disabledNormalBlockRT`/`disabledSubtractBlockRT`（禁用+预备合并遮罩）供 `BlockCompose` prog2；`_ReadyComposeRT` = `composedDisabledBlockRT`（即 prog2 输出） |

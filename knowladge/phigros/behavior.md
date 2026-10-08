@@ -27,19 +27,31 @@ void Update() {
 }
 ```
 
-`UpdateBlockAnimations()` 内部（VA `0x1D7098C`）：
+`UpdateBlockAnimations()` 内部（VA `0x1D7098C`，已逐指复核）：
 
 ```csharp
 void UpdateBlockAnimations() {
-    if (isDragging) return;
+    if (isDragging) return;                 // 0x60
     if (!IsTimeValid()) return;
-    GetBlockGeometry(Vector2.one * 0.5f, out var geo);   // anchor = (0.5, 0.5)
-    UpdateScale(...);            // → (sx, sy)
-    UpdateRotation(...);         // → angle
-    var pos = UpdateMovement(geo, scale, angle);
-    transform.localPosition = pos;
-    transform.localScale   = new Vector3(Mathf.Abs(sx), Mathf.Abs(sy), 1f);
-    transform.eulerAngles = new Vector3(0, 0, angle);
+
+    Vector2 anchor = Vector2.one * 0.5f;              // (0.5, 0.5)
+    Geometry geo = GetBlockGeometry(anchor);          // → (size, center, anchorWorld)
+
+    var dc = new AnimState {                          // 栈上 DisplayClass
+        currentSize     = geo.size,
+        originalSize    = geo.size,
+        currentCenter   = geo.center,
+        currentRotation = 0f,
+    };
+    (Vector2 size, Vector2 center) sc = UpdateScale(ref dc);      // 就地改 dc
+    (float rot, Vector2 rotCenter)    rt = UpdateRotation(ref dc); // 就地改 dc
+
+    // 注意：Movement 的两个参数分别是【原始几何中心】与【旋转后的中心】
+    Vector2 pos = UpdateMovement(geo.center, rt.rotCenter);
+
+    transform.localPosition = new Vector3(pos.x, pos.y, 0f);
+    transform.localScale    = new Vector3(Mathf.Abs(sc.size.x), Mathf.Abs(sc.size.y), 1f);
+    transform.eulerAngles   = new Vector3(0f, 0f, rt.rot);
 }
 ```
 
@@ -48,6 +60,19 @@ void UpdateBlockAnimations() {
 - **执行序是 Scale → Rotation → Movement**，位置计算依赖已算出的缩放与旋转。
 - `localScale` 的两个分量**取绝对值**，`z` 恒为 `1`。
 - `isDragging` 为真时，变换更新**整段跳过**，块保持编辑器里手动拖好的位置。
+
+::: danger 初版此处的伪代码有误（已按反汇编订正）
+初版写成 `GetBlockGeometry(Vector2.one * 0.5f, out var geo)` 与
+`UpdateMovement(geo, scale, angle)`，并把 `UpdateScale`/`UpdateRotation` 的结果
+描述为独立返回值。**实际（VA `0x1D7098C`）**：
+
+1. `GetBlockGeometry(Vector2)` **按值返回** `ValueTuple<Vector2,Vector2,Vector2>` = `(size, center, anchorWorld)`，不是 `out`。
+2. `UpdateScale`/`UpdateRotation` 都是 `ref <>c__DisplayClass24_0`（就地读改共享 `AnimState`），
+   各自返回 `(size,center)` / `(rotation,center)`；`AnimState` 在栈上（`sp+0x20`）。
+3. `UpdateMovement` 的参数是 **`(originalCenter = geo.center, currentCenter = 旋转后中心)`**，
+   不是 `(geo, scale, angle)`。位置 = 旋转后中心 + （插值目标 − 原始几何中心）。
+:::
+
 
 ::: tip `isDragging` 的真实含义
 该字段**不是**「手指是否在移动」——按住不动时它同样为 `true`。它标记的是
@@ -114,59 +139,134 @@ now > Mathf.Max(disappearTime, disableTime) + destroyInterval
 表内容全部由 `powf` 生成：
 
 ```csharp
-// ── 主循环：idx 取 1, 4, 7, 10（每次 +3），指数 n = idx / 3 + 2（整数除法）
-EaseInfos[idx]     = Mathf.Pow(i / 100f, n);                 // "in"
-EaseInfos[idx + 1] = 1f - Mathf.Pow(1f - i / 100f, n);       // "out"
+// ── 主循环：t 取 1, 4, 7, 10（每次 +3），指数 n = t / 3 + 2（整数除法）
+for (t in {1, 4, 7, 10}) {
+    n = t / 3 + 2;                                                 // n = 2, 3, 4, 5
+    for (i = 0…100) EaseInfos[t][i]     = Pow(i / 100f, n);          // "in"
+    for (i = 0…100) EaseInfos[t + 1][i] = 1f - Pow(1f - i/100f, n);  // "out"
+
+    // ── 关键：同一轮里再对 t+2 做两段降采样混合（每一轮都做，不止 12）
+    for (j = 0…49) EaseInfos[t + 2][j]      = EaseInfos[t][8 + 2j] * 0.5f;
+    for (j = 0…49) EaseInfos[t + 2][58 + j] = EaseInfos[t + 1][8 + 2j] * 0.5f + 0.5f;
+    EaseInfos[t + 2][100] = 1f;
+}
+EaseInfos[13] = 0f;   // 全 0
+EaseInfos[14] = 1f;   // 全 1
 ```
 
-循环之后还有三段后处理（用 `j` 表示目标表内索引，勿与指数 `n` 混淆）：
+因此：
 
-```csharp
-// 1) 对 EaseInfos[12] 做隔点降采样并压半
-EaseInfos[12][j]      = EaseInfos[10][8 + 2j] * 0.5f;              // j = 0…49
+- `EaseInfos[t]`（`1/4/7/10`）= **in**，`EaseInfos[t+1]`（`2/5/8/11`）= **out**，
+- `EaseInfos[t+2]`（**`3/6/9/12`**）= **复合**（降采样 + 压半），**不是死表**。
 
-// 2) 同法作用于覆盖度通道，再抬到 0.5~1.0 区间
-EaseInfos[12][58 + j] = EaseInfos[11][8 + 2j] * 0.5f + 0.5f;       // j = 0…49
+::: danger 初版把 `3 / 6 / 9` 当成了死表（恒 0）——**错误**
+初版以为降采样只作用于 `EaseInfos[12]`（把主循环理解为只跑 `t=10`）。实际上
+`t = 1, 4, 7, 10` **每一轮都执行**降采样，分别写入 `EaseInfos[3]`、`[6]`、`[9]`、`[12]`。
+四张复合表结构相同，只是源指数不同（quad / cubic / quart / quint）。
+:::
 
-// 3) 末点归一
-EaseInfos[12][100]    = 1f;
-
-EaseInfos[13] = 0f;   // 全部置 0
-EaseInfos[14] = 1f;   // 全部置 1
-```
-
-于是 `easeType 12` 在索引 `u = j / 100` 上的取值为：
+复合表结构（对 `p ∈ {1,4,7,10}`，目标 `EaseInfos[p+2]`）：
 
 | 索引区间 | 取值 |
 | --- | --- |
-| `0…46` | `EaseInfos[10][8 + 2j] × 0.5`，即 `pow(u, 5)` 的隔点降采样折半 |
-| `47…49` | 同上式，但源索引 **102/104/106 越界** → 值为堆垃圾，见[下方警告](#缓动表采样点对照) |
-| `50…57` | **未被任何语句写入** → 保持 `new float[101]` 的零值 |
-| `58…99` | `(EaseInfos[11][8 + 2j] × 0.5) + 0.5` |
-| `100` | `1.0` |
+| `0…46` | `EaseInfos[p][8 + 2j] × 0.5` |
+| `47…49` | 源索引 **102 / 104 / 106 越界** → 堆垃圾（见[下方警告](#缓动表采样点对照)） |
+| `50…57` | **未写入** → 保持 `new float[101]` 的零值 |
+| `58…100` | `EaseInfos[p+1][8 + 2j] × 0.5 + 0.5`（`100` 被 `1.0` 覆盖） |
 
 | easeType | 曲线 | 说明 |
 | --- | --- | --- |
 | `0` | `u` | 线性 |
 | `1` | `u²` | in-quad |
 | `2` | `1 − (1 − u)²` | out-quad |
-| `3` | `0` | **未写入，恒为 0** |
+| `3` | 复合（源 `1` / `2`） | 降采样 + 压半，含断点 |
 | `4` | `u³` | in-cubic |
 | `5` | `1 − (1 − u)³` | out-cubic |
-| `6` | `0` | **未写入，恒为 0** |
+| `6` | 复合（源 `4` / `5`） | 同上 |
 | `7` | `u⁴` | in-quart |
 | `8` | `1 − (1 − u)⁴` | out-quart |
-| `9` | `0` | **未写入，恒为 0** |
+| `9` | 复合（源 `7` / `8`） | 同上 |
 | `10` | `u⁵` | in-quint |
 | `11` | `1 − (1 − u)⁵` | out-quint |
-| `12` | 见上（分段，含两处断点） | 降采样混合 |
-| `13` | `0` | **恒为 0** |
+| `12` | 复合（源 `10` / `11`） | 同上 |
+| `13` | `0` | **恒为 0（唯一死表）** |
 | `14` | `1` | **恒为 1（瞬间到位）** |
 
-::: warning easeType 12 存在两个「断点」
+::: warning 复合表（`3 / 6 / 9 / 12`）都有两处「断点」
 `50…57` 这 8 个采样点未被写入，保持为 `0`；而 `58` 处又出现 `0.5 + …` 的跳变。
-查表使用线性插值，因此 `u` 落在 `0.49…0.58` 之间时该曲线会有可见的不连续。
-官谱中 `easeType 12` 使用较少（move X 8 次、rotate 4 次），影响有限。
+查表使用线性插值，因此 `u` 落在 `0.49…0.58` 之间时曲线会有可见的不连续。
+四张复合表都如此（只是源指数不同）。
+:::
+
+### 2.1.1 两套缓动定义对照（易混淆，务必区分）
+
+同样的枚举编号（`0`~`14`）在**两套来源**里含义不完全相同。下表把两者并排列出。
+
+::: warning 本仓库的取舍：复现时按「社区缓动表」（B），不是反编译的复合表（A）
+- **A = APK 逐字反汇编**（`GetEase.Instantiation`）：`3/6/9/12` 是降采样 + 压半的**复合表**，
+  含零断点与越界读堆垃圾 —— 这是游戏**实际**运行的曲线。
+- **B = 社区标准表**（`LINEAR/IN_QUAD/…/IN_OUT_*`）：`3/6/9/12` 是**对称 in-out**。
+
+**结论**：尽管 A 与 APK 字节一致，本项目在预览/复现里**采用 B（社区缓动表）**，
+即把 `3/6/9/12` 当作标准 in-out 缓动实现（原因：A 的复合表本身是引擎 bug 产物，
+效果不连续、含不可复现的堆垃圾，不宜作为编辑器预览行为）。
+
+> 与 `AGENTS.md`「以 APK 为准」的关系：本节属于**有意偏离**。文档如实记录 A（APK 事实），
+> 但实现按 B（社区表），二者都标明，不把 B 冒充为 APK 事实。
+:::
+
+**A. APK 实际定义（本仓库基准，来源：`libil2cpp.so` `GetEase.Instantiation` 反汇编）**
+
+| easeType | APK 曲线 | 备注 |
+| --- | --- | --- |
+| `0` | `u` | 线性 |
+| `1` | `u²` | in-quad |
+| `2` | `1 − (1 − u)²` | out-quad |
+| `3` | **复合表**（源 `1` / `2`，降采样 + 压半，含断点） | 非标准 in-out |
+| `4` | `u³` | in-cubic |
+| `5` | `1 − (1 − u)³` | out-cubic |
+| `6` | **复合表**（源 `4` / `5`） | 非标准 in-out |
+| `7` | `u⁴` | in-quart |
+| `8` | `1 − (1 − u)⁴` | out-quart |
+| `9` | **复合表**（源 `7` / `8`） | 非标准 in-out |
+| `10` | `u⁵` | in-quint |
+| `11` | `1 − (1 − u)⁵` | out-quint |
+| `12` | **复合表**（源 `10` / `11`） | 非标准 in-out |
+| `13` | `0` | 恒 0（停在起点） |
+| `14` | `1` | 恒 1（瞬间到终点） |
+
+**B. 常见外部命名（社区标准表 / 其他项目，❌ 与 APK 不符）**
+
+| easeType | 外部命名 | 外部假设的曲线 | 与 APK 是否一致 |
+| --- | --- | --- | --- |
+| `0` | `LINEAR` | `u` | ✅ |
+| `1` | `IN_QUAD` | `u²` | ✅ |
+| `2` | `OUT_QUAD` | `1 − (1 − u)²` | ✅ |
+| `3` | `IN_OUT_QUAD` | 对称两段 in-out-quad | ❌（APK 为复合表） |
+| `4` | `IN_CUBIC` | `u³` | ✅ |
+| `5` | `OUT_CUBIC` | `1 − (1 − u)³` | ✅ |
+| `6` | `IN_OUT_CUBIC` | 对称两段 in-out-cubic | ❌（APK 为复合表） |
+| `7` | `IN_QUART` | `u⁴` | ✅ |
+| `8` | `OUT_QUART` | `1 − (1 − u)⁴` | ✅ |
+| `9` | `IN_OUT_QUART` | 对称两段 in-out-quart | ❌（APK 为复合表） |
+| `10` | `IN_QUINT` | `u⁵` | ✅ |
+| `11` | `OUT_QUINT` | `1 − (1 − u)⁵` | ✅ |
+| `12` | `IN_OUT_QUINT` | 对称两段 in-out-quint | ❌（APK 为复合表） |
+| `13` | `ZERO` | 恒 0 | ✅ |
+| `14` | `ONE` | 恒 1 | ✅ |
+
+::: danger 差异仅在 `3 / 6 / 9 / 12`，且**决定按 B（社区表）实现**
+两套定义的**编号与单段曲线完全一致**，唯一分歧是 `3 / 6 / 9 / 12`：
+
+- **A（APK 事实）**：`3/6/9/12` 是**降采样 + 压半的复合表**，含 `50…57` 零断点与 `47…49`
+  越界读的堆垃圾（见上文「复合表结构」与「越界读」两节），**非单调**、效果不连续。
+- **B（社区表，**本项目采用**）**：`3/6/9/12` 是**对称 in-out 缓动**（前半 in、后半 out，
+  `u=0.5` 处约 `0.5`）。
+
+**取舍**：本仓库预览/复现**按 B 实现** —— 即 `3`=in-out-quad、`6`=in-out-cubic、
+`9`=in-out-quart、`12`=in-out-quint，用标准对称公式，而**不是**反编译的复合表。
+
+`13`（`ZERO`=恒 0，停在起点）/`14`（`ONE`=恒 1，瞬间到终点）两套含义一致，照用即可。
 :::
 
 ### 缓动表采样点对照
@@ -174,14 +274,14 @@ EaseInfos[14] = 1f;   // 全部置 1
 下表由分析脚本 `tools/_gen_ease_table.py`（不随文档提供）从反汇编公式重建，
 **5 个采样点全部重算吻合**。完整 101 点可用该脚本直接导出为 JSON。
 
-::: warning 这不是「完整缓动表」，且 `easeType 12` 有 3 个点不可复现
+::: warning 这不是「完整缓动表」，且复合表有 3 个点不可复现
 初版称此表为「完整缓动表…15 × 101 个值全部通过恒等式校验，可直接用作复现时的对照表」。
-**这是不准确的**，有两层问题：
+**这是不准确的**，有三层问题：
 
 1. 本表只列出 5 个采样点（`u = 0 / 0.25 / 0.5 / 0.75 / 1`），不是 101 个。
-2. 校验只覆盖公式与端点，**没有做单调性或 `pow` 对称性检查**——
-   初版声称校验了 `E[i-1] ≤ E[i] ≤ E[i+1]`，但 `E[12]` 本身非单调
+2. 校验只覆盖公式与端点，**没有做单调性检查**——复合表（`3/6/9/12`）本身非单调
    （见下表 `0.25 → 0.50` 从 `0.0328` 降到 `0.0000`），该断言不成立。
+3. 初版把 `3 / 6 / 9` 的整行写成 `0`——**错误**（它们与 `12` 同为复合表）。
 :::
 
 | easeType | u=0.00 | u=0.25 | u=0.50 | u=0.75 | u=1.00 |
@@ -189,50 +289,44 @@ EaseInfos[14] = 1f;   // 全部置 1
 | `0` | 0.0000 | 0.2500 | 0.5000 | 0.7500 | 1.0000 |
 | `1` | 0.0000 | 0.0625 | 0.2500 | 0.5625 | 1.0000 |
 | `2` | 0.0000 | 0.4375 | 0.7500 | 0.9375 | 1.0000 |
-| `3` | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| `3` | 0.0032 | 0.1682 | 0.0000 | 0.8318 | 1.0000 |
 | `4` | 0.0000 | 0.0156 | 0.1250 | 0.4219 | 1.0000 |
 | `5` | 0.0000 | 0.5781 | 0.8750 | 0.9844 | 1.0000 |
-| `6` | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| `6` | 0.0003 | 0.0976 | 0.0000 | 0.9024 | 1.0000 |
 | `7` | 0.0000 | 0.0039 | 0.0625 | 0.3164 | 1.0000 |
 | `8` | 0.0000 | 0.6836 | 0.9375 | 0.9961 | 1.0000 |
-| `9` | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
+| `9` | 0.0000 | 0.0566 | 0.0000 | 0.9434 | 1.0000 |
 | `10` | 0.0000 | 0.0010 | 0.0312 | 0.2373 | 1.0000 |
 | `11` | 0.0000 | 0.7627 | 0.9688 | 0.9990 | 1.0000 |
 | `12` | 0.0000 | 0.0328 | 0.0000 | 0.9672 | 1.0000 |
 | `13` | 0.0000 | 0.0000 | 0.0000 | 0.0000 | 0.0000 |
 | `14` | 1.0000 | 1.0000 | 1.0000 | 1.0000 | 1.0000 |
 
-::: danger `easeType 12` 的 `47`~`49` 三点越界读，且**会被采样**
-`EaseInfor` 构造函数构建 `E[12]` 的两段降采样时：
+::: danger 复合表（`3/6/9/12`）的 `47`~`49` 三点越界读，且**会被采样**
+对每个源 `p ∈ {1,4,7,10}`，构建 `E[p+2]` 时：
 
 | pass | 目标索引 | 源索引 |
 | --- | --- | --- |
-| 1（从 `E[10]`） | `j = 0…49` | `8 + 2j`，即最大 **106** |
-| 2（从 `E[11]`） | `j = 58…107`→ 实际写入 `58…99` | `8 + 2j`，同样越界 |
+| A（从 `E[p]`） | `j = 0…49` | `8 + 2j`，最大 **106** |
+| B（从 `E[p+1]`） | `58…107` → 有效写入 `58…100` | `8 + 2j` |
 
-`EaseInfos` 每项只有 101 个 float（合法索引 `0…100`），源索引 **102 / 104 / 106**
-越界，读取的是相邻堆内存。`tools/_gen_ease_table.py` 的输出明确标注这三个槽位
-**不可复现**（`NOT reproducible`）。
+`EaseInfos` 每项只有 101 个 float（合法索引 `0…100`），pass A 在 `j = 47…49`
+时读到源索引 **102 / 104 / 106**，越界读取相邻堆内存。
 
 ::: warning 初版「实际行为无影响」的推理是错的
-初版称「查表时对 `i ≥ 100` 会被钳制，所以越界值永远取不到」。**这个推理不成立**：
-
 - 钳制作用在**运行时查表**的下标 `i = progress × 100` 上；
-- 越界发生在**构建期**，即写入 `E[12][47..49]` 时读取源表的 102/104/106。
+- 越界发生在**构建期**，即写入 `E[p+2][47..49]` 时读取源表的 102/104/106。
 
-因此 `E[12][47]`、`[48]`、`[49]` 三个值本身**是未定义的堆垃圾**，
-且它们落在 `u ∈ [0.47, 0.50)` 区间——**这个区间会被正常采样**。
-
-原版在这三个点的值无法在不运行游戏的情况下确定；按公式重建的实现
-在这段区间会与原版不符。好在 `easeType 12` 在官谱中极少使用
-（`move` X 方向 8 次、`rotate` 4 次），实际影响有限。
+因此 `E[p+2][47]`、`[48]`、`[49]`（`p+2 ∈ {3,6,9,12}`）本身**是未定义的堆垃圾**，
+且它们落在 `u ∈ [0.47, 0.50)`——**这个区间会被正常采样**。按公式重建的实现
+在这段区间会与原版不符；要逐位复现需运行游戏读取实际堆值。
 :::
 
-::: warning 这是原版的真实行为
-`EaseInfor` 构造函数只做 `new float[101]`（零初始化），循环只覆盖索引 `1, 4, 7, 10` 及其后继，
-因此 `3 / 6 / 9 / 13` **四种类型是死表**：进度恒为 `0`，事件永远停在起点。
-`14` 恒为 `1`，等价于瞬间跳到终点。
-复现时必须照抄，否则与原版表现不符。
+::: warning 唯一死表是 `13`（`14` 是瞬间到位）
+`EaseInfor` 构造函数只做 `new float[101]`（零初始化），且**没有任何赋值语句**
+覆盖 `EaseInfos[13]`，故 `13` 恒为 `0`（事件停在起点）；`14` 恒为 `1`（瞬间到终点）。
+`3 / 6 / 9 / 12` 都**不是**死表——它们由主循环的降采样写入（见上）。
+复现时勿把 `3 / 6 / 9` 当 0。
 :::
 
 实测数据吻合：`rotateEvents.easeType` 中 `0` 使用 15508 次、`14` 使用 14256 次
@@ -355,9 +449,10 @@ float CalculateEasedProgress(float curStart, float nextStart, int easeType) {
 在 `u ∈ [0, 1]` 上是**几乎等价**的（差异仅来自原版每 `0.01` 一次的线性插值，
 最大偏差量级 `1e-4`）。但必须照抄的三处行为不能省：
 
-1. `easeType 3 / 6 / 9 / 13` 恒为 `0`、`14` 恒为 `1`；
-2. `easeType 12` 的 `50…57` 断点（零值）与 `57→58` 跳变；
-3. `i ≥ 100` / `i < 0` 的钳制。
+1. `easeType 13` 恒为 `0`、`14` 恒为 `1`；
+2. 复合表（`3 / 6 / 9 / 12`）的 `50…57` 断点（零值）与 `57→58` 跳变；
+3. 复合表 `47~49` 三点越界读，值不可复现；
+4. `i ≥ 100` / `i < 0` 的钳制。
 
 若追求逐位一致，就用分析脚本 `tools/_gen_ease_table.py`（不随文档提供）
 生成完整 101 点表再查。
@@ -441,6 +536,25 @@ return (rotation, cur.anchor);
 
 ## 3 变换
 
+变换合成的数据结构（均与反汇编一致）：
+
+```csharp
+// GetBlockGeometry 的返回值（按值元组，不是 out）
+struct Geometry { Vector2 size; Vector2 center; Vector2 anchorWorld; }
+
+// UpdateScale / UpdateRotation 共享的可变状态（栈上 <>c__DisplayClass24_0）
+struct AnimState {
+    Vector2 currentSize;      // +0x8
+    Vector2 currentCenter;    // +0x10
+    Vector2 originalSize;     // +0x18
+    float   currentRotation;  // +0x20
+}
+```
+
+`UpdateBlockAnimations` 先把 `geo.size` / `geo.center` 填入 `AnimState`（`currentRotation=0`），
+再 `UpdateScale(ref dc)` → `UpdateRotation(ref dc)`（都在 `dc` 上就地累加），最后
+`UpdateMovement(geo.center, dc.currentCenter)`。
+
 ### 3.1 绕锚点缩放
 
 ```csharp
@@ -489,7 +603,7 @@ fabd  s1, wzr, s12             ; |deltaDeg|
 fcmp  s1, s0
 b.mi  <return point>           ; |deltaDeg| < threshold → 原样返回
 
-ldr   s0, [0xc34510]           ; 0.017453292  (Deg2Rad)
+ldr   s0, [0xc2622c]           ; 0.017453292  (Deg2Rad；adrp 0xc26000 + 0x22c)
 fmul  s0, s12, s0
 add   x0, sp, #0xc             ; ← 第 1 个「指针」参数 → sin
 add   x1, sp, #8               ; ← 第 2 个「指针」参数 → cos
@@ -527,8 +641,11 @@ AAPCS64 的参数分配规则是**浮点参数走 `v0`–`v7`、整数与指针�
 两者寄存器组独立。说成「第一个**指针**参数」才准确。结论（`s0` = cos）不变。
 :::
 
-`Mathf.Deg2Rad` 常数实测为 `0.017453292`（位于 `.rodata` `0xC34510`，
-由 `adrp 0xc34000 + 0x510` 得到）。
+`Mathf.Deg2Rad` 常数实测为 `0.017453292`（位于 `.rodata` `0xC2622C`，
+由 `adrp 0xc26000 + 0x22c` 得到；反汇编实测 `ldr s0,[x8,#0x22c]`）。
+
+> 初版写作 `0xC34510`（`adrp 0xc34000 + 0x510`）——**地址错误**，该处是无关的 denormal，
+> 正确地址是 `0xC2622C`。
 
 ::: warning 守卫条件的表达式（已按 APK 完全解出）
 初版写作 `if (Mathf.Abs(deltaDeg) < 1e-6f * Mathf.Abs(deltaDeg))`，并据此说「该式恒为假」。
@@ -634,10 +751,12 @@ wasVisible = visible; wasReady = ready;
 :::
 
 > 等价 C# 见 [`code/PreviewBlockControl.decompiled.cs`](./code/PreviewBlockControl.decompiled.md)
-> （`UpdateBlocksTransform` / `UpdateBlockActivation` / `GetBlockGeometry` / 插值 / 命中 等；
-> `UpdateScale` / `UpdateRotation` 与两个协程体标注为未重构）。
+> （`Start` / `UpdateBlockAnimations` / `Geometry` / `AnimState` / `UpdateScale` /
+> `UpdateRotation` / `UpdateMovement` / `UpdateBlocksTransform` / `UpdateBlockActivation` /
+> `UpdateBlockInfo` / `GetBlockGeometry` / 插值 / 两个协程体等 **均已重构，无占位**）。
 
-`isSubtract` 的 `0.1` alpha 常数位于 `.rodata` `0xC344CC`。
+`isSubtract` 的 `0.1` alpha 常数位于 `.rodata` `0xC261F0`（`adrp 0xc26000 + ldr [x8,#0x1f0]`；
+`fcsel`：`isSubtract ? 0.1 : 1.0`）。
 
 ::: warning 生效后的残留窗口
 `disableTime ≤ τ < disappearTime` 这一段**不落在上述五阶段之内**，因为它不对应任何
@@ -675,70 +794,77 @@ public bool IsActive(float t) => t >= enableTime && t < disableTime;
 
 ## 5 命中判定与触摸
 
-### 5.1 触摸区尺寸
+### 5.1 命中测试（VA `0x1D22560`，已逐指复核）
 
-`JudgeControl.TryGetBlockTouchHalfSize`：
-
-```csharp
-float insetPx = blockTouchInsetScreenHeightRatio      // 0.03
-              * Mathf.Max(block.screenHeight, 0f);   // 屏高 H
-
-float ix = Mathf.Min(Mathf.Max(insetPx / lossyScale.x, 0f), maxBlockTouchInsetLocal);  // 上限 0.25
-float iy = Mathf.Min(Mathf.Max(insetPx / lossyScale.y, 0f), maxBlockTouchInsetLocal);
-
-float sgn = block.blockInfo.isSubtract ? -1f : 1f;
-
-halfSize = new Vector2(ix * sgn + 0.5f, iy * sgn + 0.5f);
-```
-
-以单位 quad 的半边长 `0.5` 为基准：
-
-| 块类型 | 触摸半边长 | 效果 |
-| --- | --- | --- |
-| 普通块 | `0.5 + inset` | 触摸区**外扩**，好按 |
-| 减块 | `0.5 − inset` | 触摸区**内缩**，难按 |
-
-外扩量按 `screenHeight`（**世界**高度 = `2·orthoSize` = `10`）的 `3%` 得 `0.3` 世界单位，
-再除以 `lossyScale`（块的世界缩放）换算到局部空间。由于 `orthoSize` 恒为 `5.0`、`screenHeight` 恒为 `10`，
-该外扩在局部空间恒为 `0.03`（`insetPx` 这个变量名有误导，实为世界量）。`0.25` 的上限防止小块
-`lossyScale` 过小导致外扩量挤空触摸区。
-
-若 `lossyScale` 任一分量的绝对值小于 `1e-4`，判定直接失败（防止退化矩阵）。
-
-### 5.2 命中测试
+::: danger 初版的「触摸区外扩/内缩（inset）」在 APK 里**不存在**
+初版描述了 `JudgeControl.TryGetBlockTouchHalfSize`（按 `screenHeight*0.03` 计算 inset、
+普通块外扩 / 减块内缩、上限 `0.25`），并称 `IsPositionInsideBlock` 调用它。
+**这些方法在 `dump.cs` 元数据里根本不存在**（`TryGetBlockTouchHalfSize` /
+`GetBlockTouchCorner` / `IsPositionInsideOriginalBlock` 全无）。真实实现只有一个
+`IsPositionInsideBlock`，且用的是**裸半边长 `0.5`**，无任何 inset。下方已按反汇编重写。
+:::
 
 ```csharp
-bool IsPositionInsideBlock(block, worldPos) {
-    if (!TryGetBlockTouchHalfSize(block, out var half)) return false;
-    Vector3 local = block.transform.InverseTransformPoint(
+// JudgeControl.IsPositionInsideBlock(PreviewBlockControl block, Vector2 worldPos)  VA 0x1D22560
+static bool IsPositionInsideBlock(PreviewBlockControl block, Vector2 worldPos)
+{
+    if (block == null) return false;                    // Unity null 检查（0x39FE1FC）
+
+    Vector3 s = block.transform.lossyScale;             // 0x3A0A9B0
+    const float kEps = 1e-4f;                            // .rodata 0xC26070 = 9.9999997e-05
+    if (Mathf.Abs(s.x) <= kEps) return false;           // 任一分量过小 → 直接失败
+    if (Mathf.Abs(s.y) <= kEps) return false;
+
+    Vector3 local = block.transform.InverseTransformPoint(   // 0x3A0A364，含 0.5 的 z=0
         new Vector3(worldPos.x, worldPos.y, 0f));
-    return Mathf.Abs(local.x) <= half.x && Mathf.Abs(local.y) <= half.y;
-}
-```
-
-在**局部空间**做轴对齐包围盒测试，因此块的旋转与缩放自动生效。
-
-另有一套不含 inset 的「原始矩形」测试，用于覆盖统计：
-
-```csharp
-static bool IsPositionInsideOriginalBlock(block, worldPos) {
-    Vector3 local = block.transform.InverseTransformPoint(...);
     return Mathf.Abs(local.x) <= 0.5f && Mathf.Abs(local.y) <= 0.5f;
 }
 ```
 
+要点：
+
+- **没有 inset**：判据是恒定的半边长 `0.5`（单位 quad 的半边），普通块与减块**用同一套**命中区。
+- 在**局部空间**做轴对齐包围盒测试，因此块的旋转与缩放自动生效。
+- `lossyScale` 任一分量绝对值 ≤ `1e-4`（`.rodata` `0xC26070`）时判定失败，防退化矩阵。
+
+### 5.2 `TryGetBlockingBlock`（VA `0x1D22010`）
+
+```csharp
+// JudgeControl.TryGetBlockingBlock(Vector2 worldPos, out PreviewBlockControl blockingBlock)  VA 0x1D22010
+bool TryGetBlockingBlock(Vector2 worldPos, out PreviewBlockControl blockingBlock)
+{
+    blockingBlock = null;
+    var blocks = previewElementUpdateControl.Blocks;     // 0x90 → 0x58
+    PreviewBlockControl normal = null;                   // 普通块（取第一个命中）
+    PreviewBlockControl subtract = null;                 // 减块（取第一个命中）
+    int subtractHits = 0;
+
+    foreach (var b in blocks)
+    {
+        if (b == null) continue;                          // Unity null 检查
+        if (!b.IsActive(nowTime)) continue;               // 0x1D71C40
+        if (!IsPositionInsideBlock(b, worldPos)) continue; // 0x1D22560
+        if (!b.blockInfo.isSubtract) { if (normal == null) normal = b; }
+        else                         { if (subtract == null) subtract = b; subtractHits++; }
+    }
+
+    // 奇偶抵消：命中减块数为奇数 ⇔ 该点被「挖空」
+    bool subtracted = (subtractHits & 1) != 0;
+    if (subtracted == (normal != null)) { /* 抵消或未命中 */ return false; }
+    blockingBlock = (normal != null) ? normal : subtract;
+    return true;
+}
+```
+
+判据：`(减块命中数&1) != (普通块命中!=null)` 时才返回命中；抵消（同为真）或不命中（同为假）
+都返回 `false`。返回的块优先取普通块。
+
 ### 5.3 四角
 
-`GetBlockTouchCorner(block, halfSize, index)`，`index ∈ {0,1,2,3}`：
-
-| index | 局部坐标 |
-| --- | --- |
-| `0` | `(−x, −y)` |
-| `1` | `(+x, −y)` |
-| `2` | `(+x, +y)` |
-| `3` | `(−x, +y)` |
-
-随后送入 `Transform.TransformPoint` 转到世界空间。
+::: warning 初版 §5.3 的 `GetBlockTouchCorner` 字段/方法在 APK 里不存在
+`dump.cs` 无 `GetBlockTouchCorner`。命中判定直接用
+`Transform.InverseTransformPoint` 做 AABB 测试（见 §5.1），**不经过任何「四角」函数**。
+:::
 
 ### 5.4 触摸槽位生命周期
 
