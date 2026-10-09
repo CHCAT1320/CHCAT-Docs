@@ -162,6 +162,7 @@ export default withMermaid(defineConfig({
               { text: '数据规格', link: '/knowladge/phigros/data.md' },
               { text: '运行时行为', link: '/knowladge/phigros/behavior.md' },
               { text: '状态与行为', link: '/knowladge/phigros/states.md' },
+              { text: '叠加与样式', link: '/knowladge/phigros/composition.md' },
               { text: '渲染表现', link: '/knowladge/phigros/render.md' },
               { text: '材质细节', link: '/knowladge/phigros/materials.md' },
               { text: '代码（C#）', link: '/knowladge/phigros/code/' },

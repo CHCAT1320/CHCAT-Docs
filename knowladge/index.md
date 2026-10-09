@@ -38,6 +38,8 @@
 - [第9章红区（BlockArea 块系统）](./phigros/index.md)
 - [数据规格](./phigros/data.md)
 - [运行时行为](./phigros/behavior.md)
+- [状态与行为](./phigros/states.md)
+- [叠加与样式](./phigros/composition.md)
 - [渲染表现](./phigros/render.md)
 - [材质细节](./phigros/materials.md)
 - [代码（C#）](./phigros/code/)

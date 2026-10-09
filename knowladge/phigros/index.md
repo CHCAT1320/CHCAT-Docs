@@ -15,6 +15,7 @@
 | [`data.md`](./data.md) | 数据规格 | **公共符号约定**（τ / p / P / H / S）、`Chart` / `BlockArea` / 三类事件字段、驱动者 `PreviewBlockControl` 字段表、全部调参值 |
 | [`behavior.md`](./behavior.md) | 运行时行为 | 每帧执行顺序、坐标转换、缓动表与查表、变换、阶段判定、命中判定与触摸、音频 |
 | [`states.md`](./states.md) | 状态与行为 | **`BlockPhase` 五态（+Residual 过渡）**、各状态的时间条件、位置/可见、layer、颜色、判定、销毁与一次性协程 |
+| [`composition.md`](./composition.md) | 叠加与样式 | **普通/减块 × 六状态的 12 种组合**、多块叠加（普通之间累加、普通⊕减块挖洞）、渲染差值与判定奇偶的区别、触摸悬停层 |
 | [`render.md`](./render.md) | 渲染表现 | 图层与相机、**屏幕/分辨率影响因素**、RT 管线、材质参数、遮罩布局、**真实 GLSL 源码**与关键算法、发光权重 |
 | [`materials.md`](./materials.md) | 材质细节 | 各材质的 **`_ST`（tiling）**、贴图**导入设置**（Wrap/Filter/sRGB）、两套独立位移系统 |
 | [`tex/`](./tex/) | 贴图资源 | 4 张块系统贴图（`Block` / `BlockNoise1` / `PointNoise` / `FD_Noise`，从 `sharedassets12.assets` 导出） |

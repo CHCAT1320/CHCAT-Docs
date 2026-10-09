@@ -688,6 +688,9 @@ static float SafeDiv(float numerator, float denominator) {
 
 ## 4 生命周期与阶段
 
+> 状态类型与逐状态行为的独立汇总见 [`states.md`](./states)；
+> 普通/减块 × 状态的叠加与样式见 [`composition.md`](./composition)。
+
 块由四个时间点切分出**五个阶段**，对应 `PreviewBlockControl.BlockPhase`。
 下图只示意时间推进方向；实现上**每帧按 `nowTime` 重算布尔条件**（非事件驱动）：
 
