@@ -145,6 +145,13 @@ export default withMermaid(defineConfig({
             ]
           },
           {
+            text: 'RYCEAM',
+            collapsed: false,
+            items: [
+              { text: '谱面格式说明', link: '/knowladge/ryceam/ryceam.md' }
+            ]
+          },
+          {
             text: 'UMIGURI',
             collapsed: false,
             items: [

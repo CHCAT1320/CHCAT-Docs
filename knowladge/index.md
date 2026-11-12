@@ -26,6 +26,10 @@
 - [谱面格式](./chunithm/chunithm.md)
 - [时间转换](./chunithm/time-conversion.md)
 
+## RYCEAM
+
+- [谱面格式](./ryceam/ryceam.md)
+
 ## UMIGURI
 
 - [逆向总览](./umiguri/index.md)
